@@ -1,8 +1,9 @@
 package GHS;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -13,29 +14,34 @@ public class Node implements Runnable {
     public static final byte FOUND = 0X02;
     public static final byte FIND = 0X03;
 
+    @JsonIgnore
     public Queue<Message> messages = new ConcurrentLinkedQueue<>();
+    @JsonIgnore
     private Queue<Message> capturedMessages = new LinkedList<>();
+    @JsonIgnore
     private Queue<Message> returnedMessages = new LinkedList<>();
+    @JsonIgnore
     public boolean hasNewMessages = true;
+    @JsonIgnore
     public boolean isRunning = false;
 
     public int id;
+    @JsonIgnore
     public List<Neighbour> neighbours;
 
     public byte state = SLEEPING;
     public Neighbour bestEdge;
     public Neighbour testEdge;
     public Neighbour inBranch;
-    public Weight bestWeight;
+    public Edge bestWeight;
     public int findCount;
 
     public int level = 0;
-    public Weight fragmentId;
+    public Edge fragmentId;
 
     public Node(int id, int[] neighbours, double[] weights) {
         assert (neighbours.length == weights.length);
         this.id = id;
-
         Neighbour[] arrayOfNeighbours = new Neighbour[neighbours.length];
         for (int i = 0; i < neighbours.length; i++) {
             arrayOfNeighbours[i] = new Neighbour(id, neighbours[i], weights[i]);
@@ -93,7 +99,7 @@ public class Node implements Runnable {
                         receivedInitiate(msg.level, msg.fragmentID, msg.state, msg.senderID);
                         break;
                     case Message.REPORT:
-                        receiveReport(msg.weight, msg.senderID, msg);
+                        receiveReport(msg.edge, msg.senderID, msg);
                         break;
                     }
                 }
@@ -145,7 +151,7 @@ public class Node implements Runnable {
         }
     }
 
-    public void receivedInitiate(int senderLevel, Weight senderFragmentId, byte senderState, int neighbourID) {
+    public void receivedInitiate(int senderLevel, Edge senderFragmentId, byte senderState, int neighbourID) {
         Neighbour sender = Neighbour.getNeighbourById(neighbourID, this.neighbours);
         assert (sender != null) : "wrong message. neighbour not foud.";
         assert (state != SLEEPING) : "should not receive in this state";
@@ -154,7 +160,7 @@ public class Node implements Runnable {
         this.fragmentId = senderFragmentId;
         inBranch = sender;
         bestEdge = null;
-        bestWeight = Weight.INFINITY;
+        bestWeight = Edge.INFINITY;
         for (Neighbour neighbour : neighbours) {
             if (neighbour.type != Neighbour.BRANCH)
                 continue;
@@ -184,7 +190,7 @@ public class Node implements Runnable {
 
     }
 
-    public void receiveTest(int senderLevel, Weight senderFragmentId, int neighbourID, Message inMsg) {
+    public void receiveTest(int senderLevel, Edge senderFragmentId, int neighbourID, Message inMsg) {
         Neighbour sender = Neighbour.getNeighbourById(neighbourID, this.neighbours);
         assert (sender != null) : "wrong message. neighbour not foud.";
 
@@ -210,9 +216,9 @@ public class Node implements Runnable {
         assert (sender != null) : "wrong message. neighbour not foud.";
 
         testEdge = null;
-        if (bestWeight.compareTo(sender.weight) > 0) {
+        if (bestWeight.compareTo(sender.edge) > 0) {
             bestEdge = sender;
-            bestWeight = sender.weight;
+            bestWeight = sender.edge;
             report();
         }
     }
@@ -234,22 +240,22 @@ public class Node implements Runnable {
         }
     }
 
-    public void receiveReport(Weight weight, int neighbourID, Message inMsg) {
+    public void receiveReport(Edge edge, int neighbourID, Message inMsg) {
         Neighbour sender = Neighbour.getNeighbourById(neighbourID, this.neighbours);
         assert (sender != null) : "wrong message. neighbour not foud.";
 
         if (sender != inBranch) {
             findCount--;
-            if (bestWeight.compareTo(weight) > 0) {
-                bestWeight = weight;
+            if (bestWeight.compareTo(edge) > 0) {
+                bestWeight = edge;
                 bestEdge = sender;
             }
             report();
         } else if (state == FIND) {
             returnedMessages.add(inMsg);
-        } else if (bestWeight.compareTo(weight) < 0) {
+        } else if (bestWeight.compareTo(edge) < 0) {
             changeCore();
-        } else if (weight.compareTo(bestWeight) == 0 && weight.compareTo(Weight.INFINITY) == 0) {
+        } else if (edge.compareTo(bestWeight) == 0 && edge.compareTo(Edge.INFINITY) == 0) {
             finish();
         }
     }
@@ -272,10 +278,10 @@ public class Node implements Runnable {
         MessageHandler.getMessageHandler().transferMessage(msg);
     }
 
-    private void sendReport(Weight bestWeight) {
+    private void sendReport(Edge bestEdge) {
         assert (inBranch != null);
         Message msg = new Message(id, inBranch.destination, Message.REPORT, (int) System.nanoTime());
-        msg.weight = bestWeight;
+        msg.edge = bestEdge;
         MessageHandler.getMessageHandler().transferMessage(msg);
     }
 
@@ -304,7 +310,7 @@ public class Node implements Runnable {
             msg.state = state;
         } else {
             msg.level = level + 1;
-            msg.fragmentID = receiver.weight;
+            msg.fragmentID = receiver.edge;
             msg.state = FIND;
         }
         MessageHandler.getMessageHandler().transferMessage(msg);
@@ -326,7 +332,7 @@ public class Node implements Runnable {
                 + ", returnedMessages='" + returnedMessages + "'" + ", hasNewMessages='" + hasNewMessages + "'"
                 + ", isRunning='" + isRunning + "'" + ", id='" + id + "'" + ", neighbours='" + neighbours + "'"
                 + ", state='" + getStateName(state) + "'" + ", bestEdge='" + bestEdge + "'" + ", testEdge='" + testEdge
-                + "'" + ", inBranch='" + inBranch + "'" + ", bestWeight='" + bestWeight + "'" + ", findCount='"
+                + "'" + ", inBranch='" + inBranch + "'" + ", bestEdge='" + bestEdge + "'" + ", findCount='"
                 + findCount + "'" + ", level='" + level + "'" + ", fragmentId='" + fragmentId + "'" + "}";
     }
 

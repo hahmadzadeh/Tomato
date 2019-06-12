@@ -1,13 +1,13 @@
 package GHS;
 
-public class Weight implements Comparable<Weight> {
-    public static final Weight INFINITY = new Weight(Double.MAX_VALUE, 0, 1);
+public class Edge implements Comparable<Edge> {
+    public static final Edge INFINITY = new Edge(Double.MAX_VALUE, 0, 1);
 
     public double weight;
     public int smallerID;
     public int biggerID;
 
-    public Weight(double weight, int id1, int id2) {
+    public Edge(double weight, int id1, int id2) {
         assert (id1 != id2);
         this.weight = weight;
         if (id1 < id2) {
@@ -20,8 +20,8 @@ public class Weight implements Comparable<Weight> {
     }
 
     @Override
-    public int compareTo(Weight o) { // ooni bozorg tare ke vaznesh bishtare
-        Weight ow = (Weight) o;
+    public int compareTo(Edge o) { // ooni bozorg tare ke vaznesh bishtare
+        Edge ow = (Edge) o;
         if (ow.weight != weight) {
             return (weight - ow.weight) > 0 ? 1 : -1;
         }
@@ -33,7 +33,7 @@ public class Weight implements Comparable<Weight> {
 
     @Override
     public String toString() {
-        return "{" + " weight='" + weight + "'" + ", smallerID='" + smallerID + "'" + ", biggerID='" + biggerID + "'"
+        return "{" + " edge='" + weight + "'" + ", smallerID='" + smallerID + "'" + ", biggerID='" + biggerID + "'"
                 + "}";
     }
 
@@ -41,10 +41,10 @@ public class Weight implements Comparable<Weight> {
     public boolean equals(Object o) {
         if (o == this)
             return true;
-        if (!(o instanceof Weight)) {
+        if (!(o instanceof Edge)) {
             return false;
         }
-        Weight mWeight = (Weight) o;
-        return weight == mWeight.weight && smallerID == mWeight.smallerID && biggerID == mWeight.biggerID;
+        Edge mEdge = (Edge) o;
+        return weight == mEdge.weight && smallerID == mEdge.smallerID && biggerID == mEdge.biggerID;
     }
 }

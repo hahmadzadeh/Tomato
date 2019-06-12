@@ -9,13 +9,13 @@ public class Neighbour implements Comparable<Neighbour> {
 
     public int source;
     public int destination;
-    public Weight weight;
+    public Edge edge;
     public byte type = BASIC;
 
     public Neighbour(int sourceID, int destID, double weight) {
         this.source = sourceID;
         this.destination = destID;
-        this.weight = new Weight(weight, sourceID, destID);
+        this.edge = new Edge(weight, sourceID, destID);
     }
 
     public static Neighbour getNeighbourById(int id, List<Neighbour> neighborList) {
@@ -29,19 +29,19 @@ public class Neighbour implements Comparable<Neighbour> {
     @Override
     public int compareTo(Neighbour o) {
         if (o.type == BASIC && type == BASIC)
-            return weight.compareTo(o.weight);
+            return edge.compareTo(o.edge);
         else {
             if (type == BASIC)
                 return -1;
             if (o.type == BASIC)
                 return 1;
-            return weight.compareTo(o.weight);
+            return edge.compareTo(o.edge);
         }
     }
 
     @Override
     public String toString() {
-        return "{" + " source='" + source + "'" + ", destination='" + destination + "'" + ", weight='" + weight.weight
+        return "{" + " source='" + source + "'" + ", destination='" + destination + "'" + ", edge='" + edge.weight
                 + "'" + ", type='" + getTypeName() + "'" + "}";
     }
 

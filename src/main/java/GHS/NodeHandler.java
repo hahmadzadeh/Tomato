@@ -2,7 +2,6 @@ package GHS;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 public class NodeHandler {
     private static NodeHandler singleton;
@@ -27,12 +26,12 @@ public class NodeHandler {
     }
 
     public Node constructNode(int id) {
-        ArrayList<Weight> edges = EdgeHandler.getInstance().getEdgesGivenId(id);
+        ArrayList<Edge> edges = EdgeHandler.getInstance().getEdgesGivenId(id);
         int[] neighbours = new int[edges.size()];
         double[] weights = new double[edges.size()];
 
         for (int i = 0; i < edges.size(); i++) {
-            Weight edge = edges.get(i);
+            Edge edge = edges.get(i);
             weights[i] = edge.weight;
             neighbours[i] = (edge.biggerID == id) ? edge.smallerID : edge.biggerID;
         }

@@ -13,8 +13,8 @@ public class Message {
     public byte type;
     public int level; // used for connect, initiate, test
     public byte state; // used for initiate
-    public Weight fragmentID; // used for initiate, test
-    public Weight weight; // used for report
+    public Edge fragmentID; // used for initiate, test
+    public Edge edge; // used for report
 
     public int timestamp;
 
@@ -29,7 +29,7 @@ public class Message {
     public String toString() {
         return "{" + " senderID='" + senderID + "'" + ", receiverID='" + receiverID + "'" + ", type='"
                 + getTypeName(type) + "'" + ", level='" + level + "'" + ", state='" + Node.getStateName(state) + "'"
-                + ", fragmentID='" + fragmentID + "'" + ", weight='" + weight + "'" + ", timestamp='" + timestamp + "'"
+                + ", fragmentID='" + fragmentID + "'" + ", edge='" + edge + "'" + ", timestamp='" + timestamp + "'"
                 + "}";
     }
 
@@ -73,9 +73,9 @@ ________________________________________________________________________________
 | reject      |  <empty>             |                       |                   |                  |                 |
 | change_core |  <empty>             |                       |                   |                  |                 |
 | connect     |  level(4 bytes)      |                       |                   |                  |                 |
-| report      |  smallerID(4 bytes)  |  biggerID(4 bytes)    |  weight(8 bytes)  |                  |                 |
-| test        |  smallerID(4 bytes)  |  biggerID(4 bytes)    |  weight(8 bytes)  |  level(4 bytes)  |                 |
-| initiate    |  smallerID(4 bytes)  |  biggerID(4 bytes)    |  weight(8 bytes)  |  level(4 bytes)  |  state(1 byte)  |
+| report      |  smallerID(4 bytes)  |  biggerID(4 bytes)    |  edge(8 bytes)  |                  |                 |
+| test        |  smallerID(4 bytes)  |  biggerID(4 bytes)    |  edge(8 bytes)  |  level(4 bytes)  |                 |
+| initiate    |  smallerID(4 bytes)  |  biggerID(4 bytes)    |  edge(8 bytes)  |  level(4 bytes)  |  state(1 byte)  |
 |_____________|______________________|_______________________|___________________|__________________|_________________|
 
 */
