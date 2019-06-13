@@ -12,7 +12,9 @@ public class EdgeHandler {
 
     public static EdgeHandler getInstance() {
         if (singleton == null)
-            singleton = new EdgeHandler();
+            synchronized (EdgeHandler.class) {
+                singleton = new EdgeHandler();
+            }
         return singleton;
     }
 

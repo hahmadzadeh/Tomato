@@ -19,6 +19,9 @@ public class Edge implements Comparable<Edge> {
         }
     }
 
+    public Edge() {
+    }
+
     @Override
     public int compareTo(Edge o) { // ooni bozorg tare ke vaznesh bishtare
         Edge ow = (Edge) o;

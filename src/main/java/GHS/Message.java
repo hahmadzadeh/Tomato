@@ -16,13 +16,17 @@ public class Message {
     public Edge fragmentID; // used for initiate, test
     public Edge edge; // used for report
 
-    public int timestamp;
+    public long timestamp;
 
-    public Message(int senderID, int receiverID, byte type, int timestamp) {
+    public Message(int senderID, int receiverID, byte type, long timestamp) {
         this.type = type;
         this.senderID = senderID;
         this.receiverID = receiverID;
         this.timestamp = timestamp;
+    }
+
+    public Message() {
+
     }
 
     @Override

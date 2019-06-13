@@ -1,5 +1,7 @@
 package GHS;
 
+import cache.MessageQueue;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -13,7 +15,9 @@ public class NodeHandler {
 
     public static NodeHandler getNodeHandler() {
         if (singleton == null)
-            singleton = new NodeHandler();
+            synchronized (NodeHandler.class) {
+                singleton = new NodeHandler();
+            }
         return singleton;
     }
 
@@ -25,7 +29,7 @@ public class NodeHandler {
         return (nodesPool.putIfAbsent(node.id, node) == null);
     }
 
-    public Node constructNode(int id) {
+    public Node constructNode(int id, MessageQueue queue) {
         ArrayList<Edge> edges = EdgeHandler.getInstance().getEdgesGivenId(id);
         int[] neighbours = new int[edges.size()];
         double[] weights = new double[edges.size()];
@@ -36,7 +40,7 @@ public class NodeHandler {
             neighbours[i] = (edge.biggerID == id) ? edge.smallerID : edge.biggerID;
         }
 
-        Node node = new Node(id, neighbours, weights);
+        Node node = new Node(id, neighbours, weights, queue);
         insertToPool(node);
         return node;
     }

@@ -18,6 +18,10 @@ public class Neighbour implements Comparable<Neighbour> {
         this.edge = new Edge(weight, sourceID, destID);
     }
 
+    public Neighbour() {
+
+    }
+
     public static Neighbour getNeighbourById(int id, List<Neighbour> neighborList) {
         for (Neighbour n : neighborList) {
             if (n.destination == id)
