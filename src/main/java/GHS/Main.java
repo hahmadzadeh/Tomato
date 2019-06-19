@@ -25,6 +25,10 @@ public class Main {
             Thread tr = new Thread(node);
             tr.start();
         }
+
+        Thread tr = new Thread(NodeHandler.getNodeHandler());
+        tr.start();
+
         System.out.println("salam");
     }
 }

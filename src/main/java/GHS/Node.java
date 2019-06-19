@@ -2,6 +2,8 @@ package GHS;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import provider.MessageQueue;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -14,6 +16,8 @@ public class Node implements Runnable {
     public static final byte FOUND = 0X02;
     public static final byte FIND = 0X03;
 
+    @JsonIgnore
+    public MessageQueue msgQueue;
     @JsonIgnore
     public Queue<Message> messages = new ConcurrentLinkedQueue<>();
     @JsonIgnore
@@ -39,8 +43,9 @@ public class Node implements Runnable {
     public int level = 0;
     public Edge fragmentId;
 
-    public Node(int id, int[] neighbours, double[] weights) {
+    public Node(int id, int[] neighbours, double[] weights, MessageQueue msgQueue) {
         assert (neighbours.length == weights.length);
+        this.msgQueue = msgQueue;
         this.id = id;
         Neighbour[] arrayOfNeighbours = new Neighbour[neighbours.length];
         for (int i = 0; i < neighbours.length; i++) {
@@ -57,16 +62,19 @@ public class Node implements Runnable {
             wakeup();
         }
 
+        hasNewMessages = true;
         while (hasNewMessages) {
             assert (capturedMessages.size() == 0);
 
-            while (messages.peek() != null) {
-                capturedMessages.add(messages.poll());
-            }
+            capturedMessages = msgQueue.getAll(id);
 
-            while (returnedMessages.peek() != null) {
-                capturedMessages.add(returnedMessages.poll());
-            }
+            // while (messages.peek() != null) {
+            // capturedMessages.add(messages.poll());
+            // }
+
+            // while (returnedMessages.peek() != null) {
+            // capturedMessages.add(returnedMessages.poll());
+            // }
 
             hasNewMessages = false;
 
@@ -111,6 +119,10 @@ public class Node implements Runnable {
                     }
                 }
             }
+
+            while (returnedMessages.peek() != null) {
+                msgQueue.push(id, returnedMessages.poll(), false);
+            }
         }
 
         isRunning = false;
@@ -141,6 +153,10 @@ public class Node implements Runnable {
             wakeup();
         if (senderLevel < level) {
             sender.type = Neighbour.BRANCH;
+            ///// ADD this to GHS
+            if (testEdge == sender)
+                testEdge = null;
+            ///// End
             sendInitiate(sender, true);
             if (state == FIND)
                 findCount++;
@@ -251,9 +267,12 @@ public class Node implements Runnable {
                 bestEdge = sender;
             }
             report();
-        } else if (state == FIND) {
+        } else if (state == FIND /* ADD this to GHS */ && findCount != 1 /* End */) {
             returnedMessages.add(inMsg);
         } else if (bestWeight.compareTo(edge) < 0) {
+            ///// ADD this to GHS
+            findCount--;
+            ///// End
             changeCore();
         } else if (edge.compareTo(bestWeight) == 0 && edge.compareTo(Edge.INFINITY) == 0) {
             finish();
@@ -275,31 +294,31 @@ public class Node implements Runnable {
 
     private void sendChangeCore(Neighbour bestEdge2) {
         Message msg = new Message(id, bestEdge2.destination, Message.CHANGE_CORE, (int) System.nanoTime());
-        MessageHandler.getMessageHandler().transferMessage(msg);
+        msgQueue.push(msg.receiverID, msg, true);
     }
 
     private void sendReport(Edge bestEdge) {
         assert (inBranch != null);
         Message msg = new Message(id, inBranch.destination, Message.REPORT, (int) System.nanoTime());
         msg.edge = bestEdge;
-        MessageHandler.getMessageHandler().transferMessage(msg);
+        msgQueue.push(msg.receiverID, msg, true);
     }
 
     private void sendReject(Neighbour sender) {
         Message msg = new Message(id, sender.destination, Message.REJECT, (int) System.nanoTime());
-        MessageHandler.getMessageHandler().transferMessage(msg);
+        msgQueue.push(msg.receiverID, msg, true);
     }
 
     private void sendAccept(Neighbour sender) {
         Message msg = new Message(id, sender.destination, Message.ACCEPT, (int) System.nanoTime());
-        MessageHandler.getMessageHandler().transferMessage(msg);
+        msgQueue.push(msg.receiverID, msg, true);
     }
 
     private void sendTest(Neighbour m) {
         Message msg = new Message(id, m.destination, Message.TEST, (int) System.nanoTime());
         msg.level = level;
         msg.fragmentID = fragmentId;
-        MessageHandler.getMessageHandler().transferMessage(msg);
+        msgQueue.push(msg.receiverID, msg, true);
     }
 
     private void sendInitiate(Neighbour receiver, boolean selfInfo) {
@@ -313,13 +332,13 @@ public class Node implements Runnable {
             msg.fragmentID = receiver.edge;
             msg.state = FIND;
         }
-        MessageHandler.getMessageHandler().transferMessage(msg);
+        msgQueue.push(msg.receiverID, msg, true);
     }
 
     private void sendConnect(Neighbour m) {
         Message msg = new Message(id, m.destination, Message.CONNECT, (int) System.nanoTime());
         msg.level = level;
-        MessageHandler.getMessageHandler().transferMessage(msg);
+        msgQueue.push(msg.receiverID, msg, true);
     }
 
     private void finish() {
@@ -332,8 +351,8 @@ public class Node implements Runnable {
                 + ", returnedMessages='" + returnedMessages + "'" + ", hasNewMessages='" + hasNewMessages + "'"
                 + ", isRunning='" + isRunning + "'" + ", id='" + id + "'" + ", neighbours='" + neighbours + "'"
                 + ", state='" + getStateName(state) + "'" + ", bestEdge='" + bestEdge + "'" + ", testEdge='" + testEdge
-                + "'" + ", inBranch='" + inBranch + "'" + ", bestEdge='" + bestEdge + "'" + ", findCount='"
-                + findCount + "'" + ", level='" + level + "'" + ", fragmentId='" + fragmentId + "'" + "}";
+                + "'" + ", inBranch='" + inBranch + "'" + ", bestEdge='" + bestEdge + "'" + ", findCount='" + findCount
+                + "'" + ", level='" + level + "'" + ", fragmentId='" + fragmentId + "'" + "}";
     }
 
     public static String getStateName(byte state) {
