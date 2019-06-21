@@ -28,6 +28,10 @@ public class Main {
             Node node = NodeHandler.getNodeHandler().getNodeById(i);
             executorService.submit(node);
         }
+
+        Thread tr = new Thread(NodeHandler.getNodeHandler());
+        tr.start();
+
         System.out.println("salam");
         Thread.sleep(7000);
         System.out.println("hi");
