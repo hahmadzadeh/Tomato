@@ -28,15 +28,8 @@ public class NodeRepository implements Repository<Node> {
     public void save(Node entity) throws SQLException {
         try (Connection connection = JdbcDataSource.getConnection(); PreparedStatement statement = connection.prepareStatement
                 (insertNodeDdl)) {
-            statement.setInt(1, entity.id);
-            statement.setInt(2, entity.bestEdge != null ? entity.bestEdge.destination : -1);
-            statement.setInt(3, entity.testEdge != null ? entity.testEdge.destination : -1);
-            statement.setInt(4, entity.inBranch != null ? entity.inBranch.destination : -1);
-            statement.setInt(5, entity.level);
-            statement.setInt(6, entity.findCount);
-            statement.setByte(7, entity.state);
-            statement.setString(8, entity.fragmentId != null ? entity.fragmentId.toString() : "");
-            statement.setString(9, entity.bestWeight != null ? entity.bestWeight.toString() : "");
+            createSaveNodeStatement(statement, entity);
+            statement.execute();
         }
     }
 
@@ -44,15 +37,7 @@ public class NodeRepository implements Repository<Node> {
     public void update(Node entity) throws SQLException {
         try (Connection connection = JdbcDataSource.getConnection(); PreparedStatement statement = connection.prepareStatement
                 (updateDdl)) {
-            statement.setInt(1, entity.id);
-            statement.setInt(2, entity.bestEdge != null ? entity.bestEdge.destination : -1);
-            statement.setInt(3, entity.testEdge != null ? entity.testEdge.destination : -1);
-            statement.setInt(4, entity.inBranch != null ? entity.inBranch.destination : -1);
-            statement.setInt(5, entity.level);
-            statement.setInt(6, entity.findCount);
-            statement.setByte(7, entity.state);
-            statement.setString(8, entity.fragmentId != null ? entity.fragmentId.serialized() : "");
-            statement.setString(9, entity.bestWeight != null ? entity.bestWeight.serialized() : "");
+            createSaveNodeStatement(statement, entity);
             statement.setInt(10, entity.id);
             statement.execute();
         }
@@ -103,17 +88,21 @@ public class NodeRepository implements Repository<Node> {
         try (Connection connection = JdbcDataSource.getConnection(); PreparedStatement statement = connection.prepareStatement
                 (insertNodeDdl)) {
             for (Node entity : listEntity) {
-                statement.setInt(1, entity.id);
-                statement.setInt(2, entity.bestEdge != null ? entity.bestEdge.destination : -1);
-                statement.setInt(3, entity.testEdge != null ? entity.testEdge.destination : -1);
-                statement.setInt(4, entity.inBranch != null ? entity.inBranch.destination : -1);
-                statement.setInt(5, entity.level);
-                statement.setInt(6, entity.findCount);
-                statement.setByte(7, entity.state);
-                statement.setString(8, entity.fragmentId != null ? entity.fragmentId.toString() : "");
-                statement.setString(9, entity.bestWeight != null ? entity.bestWeight.toString() : "");
+                createSaveNodeStatement(statement, entity);
                 statement.addBatch();
             }
         }
+    }
+
+    private void createSaveNodeStatement(PreparedStatement statement, Node entity) throws SQLException {
+        statement.setInt(1, entity.id);
+        statement.setInt(2, entity.bestEdge != null ? entity.bestEdge.destination : -1);
+        statement.setInt(3, entity.testEdge != null ? entity.testEdge.destination : -1);
+        statement.setInt(4, entity.inBranch != null ? entity.inBranch.destination : -1);
+        statement.setInt(5, entity.level);
+        statement.setInt(6, entity.findCount);
+        statement.setByte(7, entity.state);
+        statement.setString(8, entity.fragmentId != null ? entity.fragmentId.serialized() : "");
+        statement.setString(9, entity.bestWeight != null ? entity.bestWeight.serialized() : "");
     }
 }

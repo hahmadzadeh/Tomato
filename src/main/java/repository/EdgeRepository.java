@@ -21,4 +21,9 @@ public class EdgeRepository implements Repository<Neighbour> {
     public List<Node> loadTrivial(int first, int last) throws SQLException {
         return null;
     }
+
+    @Override
+    public void saveBatch(List<Neighbour> listEntity) throws SQLException {
+
+    }
 }
