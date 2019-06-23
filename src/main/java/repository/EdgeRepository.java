@@ -39,17 +39,21 @@ public class EdgeRepository implements Repository<Neighbour> {
     public void update(Neighbour entity) throws SQLException {
         try (Connection connection = JdbcDataSource.getConnection();
             PreparedStatement statement = connection.prepareStatement(updateEdgeDDL)) {
-
+            setEdgeStatement(entity, statement);
+            statement.setInt(5, entity.source);
+            statement.execute();
         }
     }
 
     @Override
-    public List<Node> loadTrivial(int first, int last) throws SQLException {
-        return null;
-    }
-
-    @Override
     public void saveBatch(List<Neighbour> listEntity) throws SQLException {
-
+        try (Connection connection = JdbcDataSource.getConnection();
+            PreparedStatement statement = connection.prepareStatement(insertEdgeDDL)) {
+            for(Neighbour entity: listEntity){
+                setEdgeStatement(entity, statement);
+                statement.addBatch();
+            }
+            statement.execute();
+        }
     }
 }

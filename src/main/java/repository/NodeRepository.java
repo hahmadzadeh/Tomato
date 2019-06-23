@@ -33,7 +33,7 @@ public class NodeRepository implements Repository<Node> {
         try (Connection connection = JdbcDataSource
             .getConnection(); PreparedStatement statement = connection.prepareStatement
             (insertNodeDdl)) {
-            createSaveNodeStatement(statement, entity);
+            setNodeStatement(statement, entity);
             statement.execute();
         }
     }
@@ -43,13 +43,12 @@ public class NodeRepository implements Repository<Node> {
         try (Connection connection = JdbcDataSource
             .getConnection(); PreparedStatement statement = connection.prepareStatement
             (updateDdl)) {
-            createSaveNodeStatement(statement, entity);
+            setNodeStatement(statement, entity);
             statement.setInt(10, entity.id);
             statement.execute();
         }
     }
 
-    @Override
     public List<Node> loadTrivial(int first, int last) throws SQLException {
         try (Connection connection = JdbcDataSource
             .getConnection(); PreparedStatement psNode = connection.prepareStatement
@@ -99,13 +98,27 @@ public class NodeRepository implements Repository<Node> {
             .getConnection(); PreparedStatement statement = connection.prepareStatement
             (insertNodeDdl)) {
             for (Node entity : listEntity) {
-                createSaveNodeStatement(statement, entity);
+                setNodeStatement(statement, entity);
                 statement.addBatch();
             }
         }
     }
 
-    private void createSaveNodeStatement(PreparedStatement statement, Node entity)
+    @Override
+    public void updateBatch(List<Node> listEntity) throws SQLException {
+        try (Connection connection = JdbcDataSource
+            .getConnection(); PreparedStatement statement = connection.prepareStatement
+            (updateDdl)) {
+            for (Node node : listEntity) {
+                setNodeStatement(statement, node);
+                statement.setInt(10, node.id);
+                statement.addBatch();
+            }
+            statement.execute();
+        }
+    }
+
+    private void setNodeStatement(PreparedStatement statement, Node entity)
         throws SQLException {
         statement.setInt(1, entity.id);
         statement.setInt(2, entity.bestEdge != null ? entity.bestEdge.destination : -1);
