@@ -37,7 +37,7 @@ public class Node implements Runnable {
     public Neighbour bestEdge;
     public Neighbour testEdge;
     public Neighbour inBranch;
-    public Edge bestWeight;
+    public Edge bestWeight = Edge.INFINITY;
     public int findCount;
 
     public int level = 0;
@@ -85,7 +85,7 @@ public class Node implements Runnable {
                     Message msg = capturedMessages.poll();
                     assert (msg.receiverID == id);
 
-                    System.out.println("id " + id + ": executing " + msg.timestamp);
+                    // System.out.println("id " + id + ": executing " + msg.timestamp);
 
                     switch (msg.type) {
                     case Message.ACCEPT:
@@ -153,13 +153,18 @@ public class Node implements Runnable {
             wakeup();
         if (senderLevel < level) {
             sender.type = Neighbour.BRANCH;
-            ///// ADD this to GHS
-            if (testEdge == sender)
-                testEdge = null;
-            ///// End
             sendInitiate(sender, true);
-            if (state == FIND)
+            if (state == FIND) {
                 findCount++;
+            }
+            ///// ADD this to GHS
+            if (testEdge == sender) {
+                testEdge = null;
+                if (state == FIND) {
+                    test();
+                }
+            }
+            ///// End
         } else if (sender.type == Neighbour.BASIC) {
             returnedMessages.add(inMsg);
         } else {
@@ -267,11 +272,12 @@ public class Node implements Runnable {
                 bestEdge = sender;
             }
             report();
-        } else if (state == FIND /* ADD this to GHS */ && findCount != 1 /* End */) {
+        } else if (state == FIND) {
+            // } else if (state == FIND /* ADD this to GHS */ && findCount != 1 /* End */) {
             returnedMessages.add(inMsg);
         } else if (bestWeight.compareTo(edge) < 0) {
             ///// ADD this to GHS
-            findCount--;
+            // findCount--;
             ///// End
             changeCore();
         } else if (edge.compareTo(bestWeight) == 0 && edge.compareTo(Edge.INFINITY) == 0) {
@@ -342,7 +348,10 @@ public class Node implements Runnable {
     }
 
     private void finish() {
-        System.out.println("{ id: " + id + " ,inBranch: " + ((inBranch != null) ? inBranch.destination : null) + "}");
+        // System.out.println("{ id: " + id + " ,inBranch: " + ((inBranch != null) ?
+        // inBranch.destination : null) + "}");
+        // NodeHandler.getNodeHandler().printAll();
+        NodeHandler.getNodeHandler().printEdges(this);
     }
 
     @Override
