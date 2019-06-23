@@ -1,6 +1,7 @@
 package GHS;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.ListIterator;
@@ -31,7 +32,8 @@ public class NodeHandler implements Runnable {
             @Override
             public void push(int id, Message message, boolean isMessageNew) {
                 ConcurrentLinkedQueue<Message> messages = map.get(id);
-                System.out.println("receiver: " + id + ", new? " + isMessageNew + ", message : " + message);
+                // System.out.println("receiver: " + id + ", new? " + isMessageNew + ", message:
+                // " + message);
                 if (messages == null) {
                     messages = addNewNode(id);
                 }
@@ -66,7 +68,7 @@ public class NodeHandler implements Runnable {
                     return new LinkedList<>();
                 LinkedList<Message> result = new LinkedList<>();
                 while (messages.peek() != null) {
-                    result.push(messages.poll());
+                    result.add(messages.poll());
                 }
                 return result;
             }
@@ -132,10 +134,32 @@ public class NodeHandler implements Runnable {
                 }
             }
             try {
-                Thread.sleep(500);
+                Thread.sleep(50);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
+    }
+
+    public void printEdges(Node node) {
+        for (Neighbour n : node.neighbours) {
+            if (n.type == Neighbour.BRANCH && n != node.inBranch) {
+                System.out.println("(" + n.source + ", " + n.destination + ") ");
+                printEdges(getNodeById(n.destination));
+            }
+        }
+        if (node.id == getNodeById(node.inBranch.destination).inBranch.destination) {
+            if (node.id < node.inBranch.destination)
+                System.out.println("(" + node.id + ", " + node.inBranch.destination + ") ");
+        }
+    }
+
+    public void printAll() {
+        System.out.println("Ans :");
+        for (Node n : nodesPool.values()) {
+            System.out.println(n);
+            System.out.println(" ");
+        }
+        System.out.println("End Ans");
     }
 }
