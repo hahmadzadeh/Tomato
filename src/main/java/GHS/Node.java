@@ -1,8 +1,7 @@
 package GHS;
 
+import cache.MessageQueue;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
-import provider.MessageQueue;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -42,6 +41,20 @@ public class Node implements Runnable {
 
     public int level = 0;
     public Edge fragmentId;
+
+    public Node(int id, List<Neighbour> neighbours, byte state, Neighbour bestEdge
+            , Neighbour testEdge, Neighbour inBranch, Edge bestWeight, int findCount, int level, Edge fragmentId) {
+        this.id = id;
+        this.neighbours = neighbours;
+        this.state = state;
+        this.bestEdge = bestEdge;
+        this.testEdge = testEdge;
+        this.inBranch = inBranch;
+        this.bestWeight = bestWeight;
+        this.findCount = findCount;
+        this.level = level;
+        this.fragmentId = fragmentId;
+    }
 
     public Node(int id, int[] neighbours, double[] weights, MessageQueue msgQueue) {
         assert (neighbours.length == weights.length);

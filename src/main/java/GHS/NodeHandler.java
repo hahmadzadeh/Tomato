@@ -1,15 +1,12 @@
 package GHS;
 
+import cache.MessageQueue;
+
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.ListIterator;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
-import provider.MessageQueue;
 
 public class NodeHandler implements Runnable {
     private static NodeHandler singleton;

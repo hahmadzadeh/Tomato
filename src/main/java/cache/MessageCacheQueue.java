@@ -9,8 +9,9 @@ import redis.clients.jedis.JedisPoolConfig;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.List;
 import java.util.Objects;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
 public class MessageCacheQueue implements MessageQueue {
@@ -48,7 +49,7 @@ public class MessageCacheQueue implements MessageQueue {
     }
 
     @Override
-    public void push(int id, Message message) {
+    public void push(int id, Message message, boolean isNew) {
         try (Jedis jedis = jedisPool.getResource()) {
             try {
                 jedis.lpush("m#" + id, mapper.writeValueAsString(message));
@@ -79,9 +80,9 @@ public class MessageCacheQueue implements MessageQueue {
     }
 
     @Override
-    public List<Message> getAll(int id) {
+    public Queue<Message> getAll(int id) {
         try(Jedis jedis = jedisPool.getResource()){
-            return jedis.lrange("m#"+id, 0, -1).stream().map(e -> {
+            return (Queue<Message>) jedis.lrange("m#"+id, 0, -1).stream().map(e -> {
                 try {
                     return mapper.readValue(e, Message.class);
                 } catch (IOException e1) {
@@ -90,5 +91,10 @@ public class MessageCacheQueue implements MessageQueue {
                 return null;
             }).filter(Objects::isNull).collect(Collectors.toList());
         }
+    }
+
+    @Override
+    public ConcurrentLinkedQueue<Message> addNewNode(int id) {
+        return null;
     }
 }

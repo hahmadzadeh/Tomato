@@ -18,6 +18,15 @@ public class Neighbour implements Comparable<Neighbour> {
         this.edge = new Edge(weight, sourceID, destID);
     }
 
+
+
+    public Neighbour(int sourceID, int destID, double weight, byte type) {
+        this.source = sourceID;
+        this.destination = destID;
+        this.type = type;
+        this.edge = new Edge(weight, sourceID, destID);
+    }
+
     public Neighbour() {
 
     }
