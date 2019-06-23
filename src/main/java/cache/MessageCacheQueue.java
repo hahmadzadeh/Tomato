@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
 public class MessageCacheQueue implements MessageQueue {
+
     final private JedisPoolConfig poolConfig = buildPoolConfig();
     private JedisPool jedisPool = new JedisPool(poolConfig, "localhost");
     private ObjectMapper mapper = new ObjectMapper();
@@ -64,7 +65,7 @@ public class MessageCacheQueue implements MessageQueue {
         try (Jedis jedis = jedisPool.getResource()) {
             try {
                 return jedis.lrange("m#" + id, -1, -1).size() == 0 ? null :
-                        mapper.readValue(jedis.lrange("m#" + id, -1, -1).get(0), Message.class);
+                    mapper.readValue(jedis.lrange("m#" + id, -1, -1).get(0), Message.class);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -74,15 +75,15 @@ public class MessageCacheQueue implements MessageQueue {
 
     @Override
     public int size(int id) {
-        try(Jedis jedis = jedisPool.getResource()){
-            return jedis.lrange("m#"+id, 0, -1).size();
+        try (Jedis jedis = jedisPool.getResource()) {
+            return jedis.lrange("m#" + id, 0, -1).size();
         }
     }
 
     @Override
     public Queue<Message> getAll(int id) {
-        try(Jedis jedis = jedisPool.getResource()){
-            return (Queue<Message>) jedis.lrange("m#"+id, 0, -1).stream().map(e -> {
+        try (Jedis jedis = jedisPool.getResource()) {
+            return (Queue<Message>) jedis.lrange("m#" + id, 0, -1).stream().map(e -> {
                 try {
                     return mapper.readValue(e, Message.class);
                 } catch (IOException e1) {

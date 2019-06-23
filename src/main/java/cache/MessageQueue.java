@@ -6,6 +6,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public interface MessageQueue {
+
     Message pop(int id);
 
     void push(int id, Message message, boolean isMessageNew);

@@ -9,6 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class NodeHandler implements Runnable {
+
     private static NodeHandler singleton;
     private ConcurrentHashMap<Integer, Node> nodesPool = new ConcurrentHashMap<>();
     private MessageQueue msgQueue;
@@ -21,8 +22,9 @@ public class NodeHandler implements Runnable {
             @Override
             public int size(int id) {
                 ConcurrentLinkedQueue<Message> messages = map.get(id);
-                if (messages == null)
+                if (messages == null) {
                     return -1;
+                }
                 return messages.size();
             }
 
@@ -43,8 +45,9 @@ public class NodeHandler implements Runnable {
             @Override
             public Message pop(int id) {
                 ConcurrentLinkedQueue<Message> messages = map.get(id);
-                if (messages == null)
+                if (messages == null) {
                     return null;
+                }
 
                 return messages.poll();
             }
@@ -52,8 +55,9 @@ public class NodeHandler implements Runnable {
             @Override
             public Message peek(int id) {
                 ConcurrentLinkedQueue<Message> messages = map.get(id);
-                if (messages == null)
+                if (messages == null) {
                     return null;
+                }
 
                 return messages.peek();
             }
@@ -61,8 +65,9 @@ public class NodeHandler implements Runnable {
             @Override
             public LinkedList<Message> getAll(int id) {
                 ConcurrentLinkedQueue<Message> messages = map.get(id);
-                if (messages == null)
+                if (messages == null) {
                     return new LinkedList<>();
+                }
                 LinkedList<Message> result = new LinkedList<>();
                 while (messages.peek() != null) {
                     result.add(messages.poll());
@@ -88,8 +93,9 @@ public class NodeHandler implements Runnable {
     }
 
     public static NodeHandler getNodeHandler() {
-        if (singleton == null)
+        if (singleton == null) {
             singleton = new NodeHandler();
+        }
         return singleton;
     }
 
@@ -146,8 +152,9 @@ public class NodeHandler implements Runnable {
             }
         }
         if (node.id == getNodeById(node.inBranch.destination).inBranch.destination) {
-            if (node.id < node.inBranch.destination)
+            if (node.id < node.inBranch.destination) {
                 System.out.println("(" + node.id + ", " + node.inBranch.destination + ") ");
+            }
         }
     }
 

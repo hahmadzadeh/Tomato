@@ -1,6 +1,7 @@
 package GHS;
 
 public class Edge implements Comparable<Edge> {
+
     public static final Edge INFINITY = new Edge(Double.MAX_VALUE, 0, 1);
 
     public double weight;
@@ -21,7 +22,8 @@ public class Edge implements Comparable<Edge> {
 
     public static Edge buildFromString(String input) {
         String[] split = input.split("#");
-        return new Edge(Double.parseDouble(split[2]), Integer.parseInt(split[0]), Integer.parseInt(split[1]));
+        return new Edge(Double.parseDouble(split[2]), Integer.parseInt(split[0]),
+            Integer.parseInt(split[1]));
     }
 
     public Edge() {
@@ -41,8 +43,9 @@ public class Edge implements Comparable<Edge> {
 
     @Override
     public String toString() {
-        return "{" + " edge='" + weight + "'" + ", smallerID='" + smallerID + "'" + ", biggerID='" + biggerID + "'"
-                + "}";
+        return "{" + " edge='" + weight + "'" + ", smallerID='" + smallerID + "'" + ", biggerID='"
+            + biggerID + "'"
+            + "}";
     }
 
     public String serialized() {
@@ -52,8 +55,9 @@ public class Edge implements Comparable<Edge> {
 
     @Override
     public boolean equals(Object o) {
-        if (o == this)
+        if (o == this) {
             return true;
+        }
         if (!(o instanceof Edge)) {
             return false;
         }

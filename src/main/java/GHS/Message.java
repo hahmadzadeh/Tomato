@@ -1,6 +1,7 @@
 package GHS;
 
 public class Message {
+
     public static final byte ACCEPT = 0X01;
     public static final byte REJECT = 0X02;
     public static final byte TEST = 0X03;
@@ -31,30 +32,33 @@ public class Message {
 
     @Override
     public String toString() {
-        return "{" + " senderID='" + senderID + "'" + ", receiverID='" + receiverID + "'" + ", type='"
-                + getTypeName(type) + "'" + ", level='" + level + "'" + ", state='" + Node.getStateName(state) + "'"
-                + ", fragmentID='" + fragmentID + "'" + ", edge='" + edge + "'" + ", timestamp='" + timestamp + "'"
-                + "}";
+        return "{" + " senderID='" + senderID + "'" + ", receiverID='" + receiverID + "'"
+            + ", type='"
+            + getTypeName(type) + "'" + ", level='" + level + "'" + ", state='" + Node
+            .getStateName(state) + "'"
+            + ", fragmentID='" + fragmentID + "'" + ", edge='" + edge + "'" + ", timestamp='"
+            + timestamp + "'"
+            + "}";
     }
 
     public static String getTypeName(byte type) {
         switch (type) {
-        case ACCEPT:
-            return "Accept";
-        case REJECT:
-            return "Reject";
-        case CONNECT:
-            return "Connect";
-        case TEST:
-            return "Test";
-        case INITIATE:
-            return "Initiate";
-        case REPORT:
-            return "Report";
-        case CHANGE_CORE:
-            return "Change-core";
-        default:
-            return "none";
+            case ACCEPT:
+                return "Accept";
+            case REJECT:
+                return "Reject";
+            case CONNECT:
+                return "Connect";
+            case TEST:
+                return "Test";
+            case INITIATE:
+                return "Initiate";
+            case REPORT:
+                return "Report";
+            case CHANGE_CORE:
+                return "Change-core";
+            default:
+                return "none";
         }
     }
 }
