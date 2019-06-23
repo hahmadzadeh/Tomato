@@ -56,4 +56,17 @@ public class EdgeRepository implements Repository<Neighbour> {
             statement.execute();
         }
     }
+
+    @Override
+    public void updateBatch(List<Neighbour> listEntity) throws SQLException {
+        try (Connection connection = JdbcDataSource.getConnection();
+            PreparedStatement statement = connection.prepareStatement(updateEdgeDDL)) {
+            for(Neighbour entity: listEntity){
+                setEdgeStatement(entity, statement);
+                statement.setInt(5, entity.source);
+                statement.addBatch();
+            }
+            statement.execute();
+        }
+    }
 }
