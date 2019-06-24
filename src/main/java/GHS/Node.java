@@ -42,6 +42,8 @@ public class Node implements Runnable {
     public int level = 0;
     public Edge fragmentId;
 
+    public Node(){}
+
     public Node(int id, List<Neighbour> neighbours, byte state, Neighbour bestEdge
             , Neighbour testEdge, Neighbour inBranch, Edge bestWeight, int findCount, int level, Edge fragmentId) {
         this.id = id;
@@ -54,6 +56,13 @@ public class Node implements Runnable {
         this.findCount = findCount;
         this.level = level;
         this.fragmentId = fragmentId;
+    }
+
+    public static Node build_NodeTemplate(String id){
+        Node node = new Node();
+        node.id = Integer.parseInt(id);
+        node.state = SLEEPING;
+        return node;
     }
 
     public Node(int id, int[] neighbours, double[] weights, MessageQueue msgQueue) {
@@ -365,6 +374,7 @@ public class Node implements Runnable {
         // inBranch.destination : null) + "}");
         // NodeHandler.getNodeHandler().printAll();
         NodeHandler.getNodeHandler().printEdges(this);
+        System.out.println(id + "-- halt");
     }
 
     @Override

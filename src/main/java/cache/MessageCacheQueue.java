@@ -14,13 +14,13 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
-public class MessageCacheQueue implements MessageQueue {
+public class MessageCacheQueue extends Cache implements MessageQueue {
 
-    final private JedisPoolConfig poolConfig = buildPoolConfig();
-    private JedisPool jedisPool = new JedisPool(poolConfig, "localhost");
+    public final static JedisPoolConfig poolConfig = buildPoolConfig();
+    public final static JedisPool jedisPool = new JedisPool(poolConfig, "localhost");
     private ObjectMapper mapper = new ObjectMapper();
 
-    private JedisPoolConfig buildPoolConfig() {
+    private static JedisPoolConfig buildPoolConfig() {
         final JedisPoolConfig poolConfig = new JedisPoolConfig();
         poolConfig.setMaxTotal(128);
         poolConfig.setMaxIdle(128);
@@ -53,7 +53,7 @@ public class MessageCacheQueue implements MessageQueue {
     public void push(int id, Message message, boolean isNew) {
         try (Jedis jedis = jedisPool.getResource()) {
             try {
-                jedis.lpush("m#" + id, mapper.writeValueAsString(message));
+                jedis.lpush("m#" + id % (cacheSizeMsg), mapper.writeValueAsString(message));
             } catch (JsonProcessingException e) {
                 e.printStackTrace();
             }
