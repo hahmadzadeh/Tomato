@@ -1,19 +1,24 @@
 package cache;
 
 import GHS.Neighbour;
+import GHS.Node;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import repository.EdgeRepository;
 
-public class NeighbourCache extends Cache{
-    private JedisPool pool = MessageCacheQueue.jedisPool;
-    private ObjectMapper mapper = new ObjectMapper();
+public class NeighbourCache extends Cache<Neighbour>{
+    public EdgeRepository edgeRepository = new EdgeRepository();
 
     public void addNeighbour(Neighbour edge){
         try(Jedis jedis = pool.getResource()){
-            jedis.rpush("edge%%" + edge.source % cacheSize, mapper.writeValueAsString(edge));
+            if (this.counter.get() % this.cacheSize == 0) {
+                flush("edge%%", Neighbour.class, edgeRepository);
+            }
+            jedis.rpush("edge%%" + edge.source, mapper.writeValueAsString(edge));
+            this.counter.incrementAndGet();
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }

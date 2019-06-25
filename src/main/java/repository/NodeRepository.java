@@ -97,10 +97,13 @@ public class NodeRepository implements Repository<Node> {
         try (Connection connection = JdbcDataSource
             .getConnection(); PreparedStatement statement = connection.prepareStatement
             (insertNodeDdl)) {
+            connection.setAutoCommit(false);
             for (Node entity : listEntity) {
                 setNodeStatement(statement, entity);
                 statement.addBatch();
             }
+            statement.executeBatch();
+            connection.commit();
         }
     }
 
@@ -114,7 +117,8 @@ public class NodeRepository implements Repository<Node> {
                 statement.setInt(10, node.id);
                 statement.addBatch();
             }
-            statement.execute();
+            statement.executeBatch();
+            connection.commit();
         }
     }
 

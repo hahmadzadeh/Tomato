@@ -49,11 +49,13 @@ public class EdgeRepository implements Repository<Neighbour> {
     public void saveBatch(List<Neighbour> listEntity) throws SQLException {
         try (Connection connection = JdbcDataSource.getConnection();
             PreparedStatement statement = connection.prepareStatement(insertEdgeDDL)) {
+            connection.setAutoCommit(false);
             for(Neighbour entity: listEntity){
                 setEdgeStatement(entity, statement);
                 statement.addBatch();
             }
-            statement.execute();
+            statement.executeBatch();
+            connection.commit();
         }
     }
 
@@ -61,12 +63,14 @@ public class EdgeRepository implements Repository<Neighbour> {
     public void updateBatch(List<Neighbour> listEntity) throws SQLException {
         try (Connection connection = JdbcDataSource.getConnection();
             PreparedStatement statement = connection.prepareStatement(updateEdgeDDL)) {
+            connection.setAutoCommit(false);
             for(Neighbour entity: listEntity){
                 setEdgeStatement(entity, statement);
                 statement.setInt(5, entity.source);
                 statement.addBatch();
             }
-            statement.execute();
+            statement.executeBatch();
+            connection.commit();
         }
     }
 }
