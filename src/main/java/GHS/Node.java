@@ -29,7 +29,7 @@ public class Node implements Runnable {
     public boolean isRunning = false;
 
     public int id;
-    @JsonIgnore
+
     public List<Neighbour> neighbours;
 
     public byte state = SLEEPING;

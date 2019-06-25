@@ -16,23 +16,26 @@ import java.util.List;
 public class NodeRepository implements Repository<Node> {
 
     private final String insertNodeDdl =
-        "INSERT INTO tomato.\"Node\" (ID, BEST_EDGE, TEST_EDGE, IN_BRANCH, LEVEL, FIND_COUNT, STATE, FRAGMENT_ID,  BEST_WEIGHT) "
-            +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "INSERT INTO tomato.\"Node\" (ID, BEST_EDGE, TEST_EDGE, IN_BRANCH, LEVEL, FIND_COUNT, STATE, FRAGMENT_ID,  BEST_WEIGHT) "
+                    +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
     private final String updateDdl = "UPDATE tomato.\"Node\"\n" +
-        "\tSET id=?, best_edge=?, test_edge=?, in_branch=?, level=?, find_count=?, state=?, fragment_id=?, best_weight=?\n"
-        +
-        "\tWHERE id=?;";
+            "\tSET id=?, best_edge=?, test_edge=?, in_branch=?, level=?, find_count=?, state=?, fragment_id=?, best_weight=?\n"
+            +
+            "\tWHERE id=?;";
 
-    private final String selectNodesTrivialDdl = "SELECT * FROM tomato.\"Node\" WHERE id BETWEEN ? AND ?";
+    private final String selectNodesTrivialDdl = "SELECT * FROM tomato.\"Node\" WHERE iid BETWEEN ? AND ?";
     private final String selectEdgeTrivialDdl = "SELECT * FROM tomato.\"Neighbour\" WHERE source BETWEEN ? AND ?";
+    private final String selectNodeDdl = "SELECT * FROM tomato.\"Node\" WHERE id=?";
+    private final String selectEdgeDdl = "SELECT * FROM tomato.\"Neighbour\" WHERE source=?";
+
 
     @Override
     public void save(Node entity) throws SQLException {
         try (Connection connection = JdbcDataSource
-            .getConnection(); PreparedStatement statement = connection.prepareStatement
-            (insertNodeDdl)) {
+                .getConnection(); PreparedStatement statement = connection.prepareStatement
+                (insertNodeDdl)) {
             setNodeStatement(statement, entity);
             statement.execute();
         }
@@ -41,8 +44,8 @@ public class NodeRepository implements Repository<Node> {
     @Override
     public void update(Node entity) throws SQLException {
         try (Connection connection = JdbcDataSource
-            .getConnection(); PreparedStatement statement = connection.prepareStatement
-            (updateDdl)) {
+                .getConnection(); PreparedStatement statement = connection.prepareStatement
+                (updateDdl)) {
             setNodeStatement(statement, entity);
             statement.setInt(10, entity.id);
             statement.execute();
@@ -51,9 +54,9 @@ public class NodeRepository implements Repository<Node> {
 
     public List<Node> loadTrivial(int first, int last) throws SQLException {
         try (Connection connection = JdbcDataSource
-            .getConnection(); PreparedStatement psNode = connection.prepareStatement
-            (selectNodesTrivialDdl); PreparedStatement psEdge = connection
-            .prepareStatement(selectEdgeTrivialDdl)) {
+                .getConnection(); PreparedStatement psNode = connection.prepareStatement
+                (selectNodesTrivialDdl); PreparedStatement psEdge = connection
+                .prepareStatement(selectEdgeTrivialDdl)) {
             psNode.setInt(1, first);
             psNode.setInt(2, last);
             psEdge.setInt(1, first);
@@ -61,32 +64,15 @@ public class NodeRepository implements Repository<Node> {
             ResultSet resultSet = psEdge.executeQuery();
             HashMap<Integer, HashMap<Integer, Neighbour>> neighbours = new HashMap<>();
             while (resultSet.next()) {
-                int source = resultSet.getInt("source");
-                int dest = resultSet.getInt("dest");
-                double weight = resultSet.getDouble("weight");
-                byte type = resultSet.getByte("type");
-                Neighbour neighbour = new Neighbour(source, dest, weight, type);
-                neighbours.computeIfAbsent(source, k -> new HashMap());
-                neighbours.get(source).put(dest, neighbour);
+                Neighbour neighbour = buildNeighbourFromResultSet(resultSet);
+                neighbours.computeIfAbsent(neighbour.source, k -> new HashMap());
+                neighbours.get(neighbour.source).put(neighbour.destination, neighbour);
             }
             resultSet = psNode.executeQuery();
             List<Node> nodes = new LinkedList<>();
             while (resultSet.next()) {
                 int id = resultSet.getInt("id");
-                int best_edge = resultSet.getInt("best_edge");
-                int test_edge = resultSet.getInt("test_edge");
-                int in_branch = resultSet.getInt("in_branch");
-                int level = resultSet.getInt("level");
-                int find_count = resultSet.getInt("find_count");
-                byte state = resultSet.getByte("state");
-                Edge fragment_id = Edge.buildFromString(resultSet.getString("fragment_id"));
-                Edge best_weight = Edge.buildFromString(resultSet.getString("best_weight"));
-                HashMap<Integer, Neighbour> neighbourHashMap = neighbours.get(id);
-                nodes.add(new Node(id, new LinkedList<>(neighbourHashMap.values()), state,
-                    neighbourHashMap.getOrDefault(best_edge, null),
-                    neighbourHashMap.getOrDefault(test_edge, null),
-                    neighbourHashMap.getOrDefault(in_branch, null), best_weight, find_count, level,
-                    fragment_id));
+                nodes.add(buildNodeFromResultSet(resultSet, neighbours.get(id)));
             }
             return nodes;
         }
@@ -95,8 +81,8 @@ public class NodeRepository implements Repository<Node> {
     @Override
     public void saveBatch(List<Node> listEntity) throws SQLException {
         try (Connection connection = JdbcDataSource
-            .getConnection(); PreparedStatement statement = connection.prepareStatement
-            (insertNodeDdl)) {
+                .getConnection(); PreparedStatement statement = connection.prepareStatement
+                (insertNodeDdl)) {
             connection.setAutoCommit(false);
             for (Node entity : listEntity) {
                 setNodeStatement(statement, entity);
@@ -110,8 +96,8 @@ public class NodeRepository implements Repository<Node> {
     @Override
     public void updateBatch(List<Node> listEntity) throws SQLException {
         try (Connection connection = JdbcDataSource
-            .getConnection(); PreparedStatement statement = connection.prepareStatement
-            (updateDdl)) {
+                .getConnection(); PreparedStatement statement = connection.prepareStatement
+                (updateDdl)) {
             for (Node node : listEntity) {
                 setNodeStatement(statement, node);
                 statement.setInt(10, node.id);
@@ -122,8 +108,53 @@ public class NodeRepository implements Repository<Node> {
         }
     }
 
+    @Override
+    public Node read(int id) throws SQLException {
+        try (Connection connection = JdbcDataSource.getConnection();
+             PreparedStatement ps = connection.prepareStatement(selectNodeDdl);
+             PreparedStatement psEdge = connection.prepareStatement(selectEdgeDdl)) {
+            ps.setInt(1, id);
+            psEdge.setInt(1, id);
+            ResultSet rset = psEdge.executeQuery();
+            HashMap<Integer, Neighbour> map = new HashMap<>();
+            while (rset.next()) {
+                Neighbour neighbour = buildNeighbourFromResultSet(rset);
+                map.put(neighbour.destination, neighbour);
+            }
+            ResultSet resultSet = ps.executeQuery();
+            resultSet.next();
+            return buildNodeFromResultSet(resultSet, map);
+
+        }
+    }
+
+    private Node buildNodeFromResultSet(ResultSet resultSet, HashMap<Integer, Neighbour> map) throws SQLException {
+        int id = resultSet.getInt("id");
+        int best_edge = resultSet.getInt("best_edge");
+        int test_edge = resultSet.getInt("test_edge");
+        int in_branch = resultSet.getInt("in_branch");
+        int level = resultSet.getInt("level");
+        int find_count = resultSet.getInt("find_count");
+        byte state = resultSet.getByte("state");
+        Edge fragment_id = Edge.buildFromString(resultSet.getString("fragment_id"));
+        Edge best_weight = Edge.buildFromString(resultSet.getString("best_weight"));
+        return new Node(id, new LinkedList<>(map.values()), state,
+                map.getOrDefault(best_edge, null),
+                map.getOrDefault(test_edge, null),
+                map.getOrDefault(in_branch, null), best_weight, find_count, level,
+                fragment_id);
+    }
+
+    private Neighbour buildNeighbourFromResultSet(ResultSet resultSet) throws SQLException {
+        int source = resultSet.getInt("source");
+        int dest = resultSet.getInt("dest");
+        double weight = resultSet.getDouble("weight");
+        byte type = resultSet.getByte("type");
+        return new Neighbour(source, dest, weight, type);
+    }
+
     private void setNodeStatement(PreparedStatement statement, Node entity)
-        throws SQLException {
+            throws SQLException {
         statement.setInt(1, entity.id);
         statement.setInt(2, entity.bestEdge != null ? entity.bestEdge.destination : -1);
         statement.setInt(3, entity.testEdge != null ? entity.testEdge.destination : -1);

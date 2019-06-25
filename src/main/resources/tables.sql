@@ -64,3 +64,6 @@ TABLESPACE pg_default;
 
 ALTER TABLE tomato."Node"
     OWNER to tomato;
+
+-----------------------------------------------------
+ALTER TABLE tomato."Node" ADD COLUMN iid SERIAL PRIMARY KEY;

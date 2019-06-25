@@ -9,10 +9,12 @@ import redis.clients.jedis.JedisPoolConfig;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class MessageCacheQueue extends Cache implements MessageQueue {
 
@@ -39,7 +41,8 @@ public class MessageCacheQueue extends Cache implements MessageQueue {
     public Message pop(int id) {
         try (Jedis jedis = jedisPool.getResource()) {
             try {
-                String rpop = jedis.rpop("m#" + id);
+                String rpop = jedis.rpop("msg%%" + id);
+                jedis.lpush("dMsg%%" + id, rpop);
                 System.out.println(rpop);
                 return rpop == null ? null : mapper.readValue(rpop, Message.class);
             } catch (IOException e) {
@@ -53,7 +56,7 @@ public class MessageCacheQueue extends Cache implements MessageQueue {
     public void push(int id, Message message, boolean isNew) {
         try (Jedis jedis = jedisPool.getResource()) {
             try {
-                jedis.lpush("m#" + id % (cacheSizeMsg), mapper.writeValueAsString(message));
+                jedis.lpush("msg%%" + id, mapper.writeValueAsString(message));
             } catch (JsonProcessingException e) {
                 e.printStackTrace();
             }
@@ -64,8 +67,8 @@ public class MessageCacheQueue extends Cache implements MessageQueue {
     public Message peek(int id) {
         try (Jedis jedis = jedisPool.getResource()) {
             try {
-                return jedis.lrange("m#" + id, -1, -1).size() == 0 ? null :
-                    mapper.readValue(jedis.lrange("m#" + id, -1, -1).get(0), Message.class);
+                return jedis.lrange("msg%%" + id, -1, -1).size() == 0 ? null :
+                    mapper.readValue(jedis.lrange("msg%%" + id, -1, -1).get(0), Message.class);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -76,14 +79,15 @@ public class MessageCacheQueue extends Cache implements MessageQueue {
     @Override
     public int size(int id) {
         try (Jedis jedis = jedisPool.getResource()) {
-            return jedis.lrange("m#" + id, 0, -1).size();
+            return jedis.lrange("msg%%" + id, 0, -1).size();
         }
     }
 
     @Override
     public Queue<Message> getAll(int id) {
         try (Jedis jedis = jedisPool.getResource()) {
-            return (Queue<Message>) jedis.lrange("m#" + id, 0, -1).stream().map(e -> {
+            Stream<String> stream = jedis.lrange("msg%%" + id, 0, -1).stream();
+            List<Message> collect = stream.map(e -> {
                 try {
                     return mapper.readValue(e, Message.class);
                 } catch (IOException e1) {
@@ -91,6 +95,8 @@ public class MessageCacheQueue extends Cache implements MessageQueue {
                 }
                 return null;
             }).filter(Objects::isNull).collect(Collectors.toList());
+            stream.forEach(e -> jedis.rpush("dmgs%%" + id, e));
+            return (Queue<Message>) collect;
         }
     }
 

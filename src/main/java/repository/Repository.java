@@ -13,4 +13,6 @@ public interface Repository<T> {
   void saveBatch(List<T> listEntity) throws SQLException;
 
   void updateBatch(List<T> listEntity) throws SQLException;
+
+  T read(int id) throws SQLException;
 }
