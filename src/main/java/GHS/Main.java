@@ -23,11 +23,11 @@ public class Main {
         }
         for (int i = 0; i < n; i++) {
             Node node = NodeHandler.getNodeHandler().getNodeById(i);
-            Thread tr = new Thread(node);
-            tr.start();
+            //Thread tr = new Thread(node);
+            //tr.start();
         }
 
-        Thread tr = new Thread(NodeHandler.getNodeHandler());
-        tr.start();
+        //Thread tr = new Thread(NodeHandler.getNodeHandler());
+        //tr.start();
     }
 }

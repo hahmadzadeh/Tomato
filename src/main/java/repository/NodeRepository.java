@@ -1,8 +1,14 @@
 package repository;
 
 import GHS.Edge;
+import GHS.Message;
 import GHS.Neighbour;
 import GHS.Node;
+import cache.MessageCacheQueue;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 import utils.JdbcDataSource;
 
 import java.sql.Connection;
@@ -15,6 +21,7 @@ import java.util.List;
 
 public class NodeRepository implements Repository<Node> {
 
+    private final JedisPool pool = MessageCacheQueue.jedisPool;
     private final String insertNodeDdl =
             "INSERT INTO tomato.\"Node\" (ID, BEST_EDGE, TEST_EDGE, IN_BRANCH, LEVEL, FIND_COUNT, STATE, FRAGMENT_ID,  BEST_WEIGHT) "
                     +
@@ -26,9 +33,10 @@ public class NodeRepository implements Repository<Node> {
             "\tWHERE id=?;";
 
     private final String selectNodesTrivialDdl = "SELECT * FROM tomato.\"Node\" WHERE iid BETWEEN ? AND ?";
-    private final String selectEdgeTrivialDdl = "SELECT * FROM tomato.\"Neighbour\" WHERE source BETWEEN ? AND ?";
+    private final String selectEdgeTrivialDdl = "SELECT * FROM tomato.\"Neighbour\" WHERE source IN (";
     private final String selectNodeDdl = "SELECT * FROM tomato.\"Node\" WHERE id=?";
     private final String selectEdgeDdl = "SELECT * FROM tomato.\"Neighbour\" WHERE source=?";
+    private final ObjectMapper mapper = new ObjectMapper();
 
 
     @Override
@@ -52,29 +60,47 @@ public class NodeRepository implements Repository<Node> {
         }
     }
 
-    public List<Node> loadTrivial(int first, int last) throws SQLException {
+    public void loadTrivial(int first, int last) throws SQLException {
         try (Connection connection = JdbcDataSource
                 .getConnection(); PreparedStatement psNode = connection.prepareStatement
-                (selectNodesTrivialDdl); PreparedStatement psEdge = connection
-                .prepareStatement(selectEdgeTrivialDdl)) {
+                (selectNodesTrivialDdl)) {
             psNode.setInt(1, first);
             psNode.setInt(2, last);
-            psEdge.setInt(1, first);
-            psEdge.setInt(2, last);
-            ResultSet resultSet = psEdge.executeQuery();
+            ResultSet resultSet = psNode.executeQuery();
+            List<TempNode> tempNodes = new LinkedList<>();
+            while (resultSet.next()) {
+                tempNodes.add(buildTempNodeFromResultSet(resultSet));
+            }
+            StringBuilder sb = new StringBuilder();
+            sb.append(selectEdgeTrivialDdl);
+            for (int i = 0; i < tempNodes.size(); i++) {
+                sb.append("?,");
+            }
+            String query = sb.deleteCharAt(sb.length() - 1).toString() + ")";
+            PreparedStatement psEdge = connection.prepareStatement(query);
+            for (int i = 0; i < tempNodes.size(); i++) {
+                psEdge.setInt(i + 1, tempNodes.get(i).id);
+            }
+            resultSet = psEdge.executeQuery();
             HashMap<Integer, HashMap<Integer, Neighbour>> neighbours = new HashMap<>();
             while (resultSet.next()) {
                 Neighbour neighbour = buildNeighbourFromResultSet(resultSet);
                 neighbours.computeIfAbsent(neighbour.source, k -> new HashMap());
                 neighbours.get(neighbour.source).put(neighbour.destination, neighbour);
             }
-            resultSet = psNode.executeQuery();
             List<Node> nodes = new LinkedList<>();
-            while (resultSet.next()) {
-                int id = resultSet.getInt("id");
-                nodes.add(buildNodeFromResultSet(resultSet, neighbours.get(id)));
+            for (TempNode tempNode: tempNodes) {
+                nodes.add(buildNodeFromTempNode(tempNode, neighbours.get(tempNode.id)));
             }
-            return nodes;
+            try (Jedis jedis = pool.getResource()) {
+                nodes.forEach(e -> {
+                    try {
+                        jedis.set("node%%" + e.id, mapper.writeValueAsString(e));
+                    } catch (JsonProcessingException e1) {
+                        e1.printStackTrace();
+                    }
+                });
+            }
         }
     }
 
@@ -128,7 +154,31 @@ public class NodeRepository implements Repository<Node> {
         }
     }
 
-    private Node buildNodeFromResultSet(ResultSet resultSet, HashMap<Integer, Neighbour> map) throws SQLException {
+    private class TempNode {
+        int id;
+        int best_edge;
+        int test_edge;
+        int in_branch;
+        int level;
+        int find_count;
+        byte state;
+        Edge fragment_id;
+        Edge best_weight;
+
+        public TempNode(int id, int best_edge, int test_edge, int in_branch, int level, int find_count, byte state, Edge fragment_id, Edge best_weight) {
+            this.id = id;
+            this.best_edge = best_edge;
+            this.test_edge = test_edge;
+            this.in_branch = in_branch;
+            this.level = level;
+            this.find_count = find_count;
+            this.state = state;
+            this.fragment_id = fragment_id;
+            this.best_weight = best_weight;
+        }
+    }
+
+    private TempNode buildTempNodeFromResultSet(ResultSet resultSet) throws SQLException {
         int id = resultSet.getInt("id");
         int best_edge = resultSet.getInt("best_edge");
         int test_edge = resultSet.getInt("test_edge");
@@ -138,11 +188,21 @@ public class NodeRepository implements Repository<Node> {
         byte state = resultSet.getByte("state");
         Edge fragment_id = Edge.buildFromString(resultSet.getString("fragment_id"));
         Edge best_weight = Edge.buildFromString(resultSet.getString("best_weight"));
-        return new Node(id, new LinkedList<>(map.values()), state,
-                map.getOrDefault(best_edge, null),
-                map.getOrDefault(test_edge, null),
-                map.getOrDefault(in_branch, null), best_weight, find_count, level,
-                fragment_id);
+        return new TempNode(id, best_edge, test_edge, in_branch, level, find_count, state, fragment_id, best_weight);
+    }
+
+    private Node buildNodeFromResultSet(ResultSet resultSet, HashMap<Integer, Neighbour> map)
+            throws SQLException {
+        TempNode tempNode = buildTempNodeFromResultSet(resultSet);
+        return  buildNodeFromTempNode(tempNode, map);
+    }
+
+    private Node buildNodeFromTempNode(TempNode tempNode, HashMap<Integer, Neighbour> map) {
+        return new Node(tempNode.id, new LinkedList<>(map.values()), tempNode.state,
+                map.getOrDefault(tempNode.best_edge, null),
+                map.getOrDefault(tempNode.test_edge, null),
+                map.getOrDefault(tempNode.in_branch, null), tempNode.best_weight, tempNode.find_count, tempNode.level,
+                tempNode.fragment_id);
     }
 
     private Neighbour buildNeighbourFromResultSet(ResultSet resultSet) throws SQLException {

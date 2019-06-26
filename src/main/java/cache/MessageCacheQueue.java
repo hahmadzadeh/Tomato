@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -68,7 +69,7 @@ public class MessageCacheQueue extends Cache implements MessageQueue {
         try (Jedis jedis = jedisPool.getResource()) {
             try {
                 return jedis.lrange("msg%%" + id, -1, -1).size() == 0 ? null :
-                    mapper.readValue(jedis.lrange("msg%%" + id, -1, -1).get(0), Message.class);
+                        mapper.readValue(jedis.lrange("msg%%" + id, -1, -1).get(0), Message.class);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -87,16 +88,19 @@ public class MessageCacheQueue extends Cache implements MessageQueue {
     public Queue<Message> getAll(int id) {
         try (Jedis jedis = jedisPool.getResource()) {
             Stream<String> stream = jedis.lrange("msg%%" + id, 0, -1).stream();
-            List<Message> collect = stream.map(e -> {
-                try {
-                    return mapper.readValue(e, Message.class);
-                } catch (IOException e1) {
-                    e1.printStackTrace();
-                }
-                return null;
-            }).filter(Objects::isNull).collect(Collectors.toList());
-            stream.forEach(e -> jedis.rpush("dmgs%%" + id, e));
-            return (Queue<Message>) collect;
+            List<String> ids = stream.collect(Collectors.toList());
+            ids.forEach(e -> jedis.rpush("dmgs%%" + id, e));
+            List<Message> collect = ids
+                    .stream().map(e -> {
+                        try {
+                            return mapper.readValue(e, Message.class);
+                        } catch (IOException e1) {
+                            e1.printStackTrace();
+                        }
+                        return null;
+                    }).filter(Objects::isNull).collect(Collectors.toList());
+            jedis.del("msg%%" + id);
+            return new LinkedBlockingQueue<>(collect);
         }
     }
 

@@ -1,25 +1,19 @@
 package loader;
 
-import GHS.Edge;
 import GHS.Neighbour;
 import GHS.Node;
 import cache.MessageCacheQueue;
 import cache.NeighbourCache;
 import cache.NodeCache;
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.ScanResult;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
 
 public class LoadGraphToPlatform {
@@ -28,18 +22,18 @@ public class LoadGraphToPlatform {
     private NodeCache nodeCache;
     private NeighbourCache neighbourCache;
 
-    public LoadGraphToPlatform() {
+    public LoadGraphToPlatform(NodeCache nodeCache, NeighbourCache neighbourCache) {
         this.properties = new Properties();
         try (InputStream in = LoadGraphToPlatform.class.getResourceAsStream("/config.properties")) {
             System.out.println(in);
             properties.load(in);
-            nodeCache = new NodeCache();
-            neighbourCache = new NeighbourCache();
+            this.nodeCache = nodeCache;
+            this.neighbourCache = neighbourCache;
         } catch (IOException e) {
         }
     }
 
-    public void initialLoadFromTextFile(String filename) throws IOException, URISyntaxException {
+    public void initialLoadFromTextFile(String filename) throws IOException{
         InputStream resourceAsStream = LoadGraphToPlatform.class.getResourceAsStream(filename);
         BufferedReader buff = new BufferedReader(new InputStreamReader(resourceAsStream));
         String e;
@@ -65,8 +59,8 @@ public class LoadGraphToPlatform {
         }
         nodeCache.counter.set(0);
         neighbourCache.counter.set(0);
-        neighbourCache.flush("edge%%", Neighbour.class, neighbourCache.edgeRepository);
-        nodeCache.flush("node%%", Node.class, nodeCache.nodeRepository);
+        neighbourCache.flush("edge%%", Neighbour.class, neighbourCache.edgeRepository, true);
+        nodeCache.flush("node%%", Node.class, nodeCache.nodeRepository, true);
         try (Jedis jedis = MessageCacheQueue.jedisPool.getResource()) {
             Set<String> keys = jedis.keys("cc%%*");
             for (String key : keys) {

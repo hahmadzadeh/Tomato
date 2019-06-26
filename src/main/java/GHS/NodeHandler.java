@@ -130,16 +130,16 @@ public class NodeHandler implements Runnable {
             for (Node node : nodesPool.values()) {
                 if (!node.isRunning) {
                     if (hasNewMessage.get(node.id) != null && hasNewMessage.get(node.id) == true) {
-                        Thread tr = new Thread(node);
+                        //Thread tr = new Thread(node);
                         hasNewMessage.replace(node.id, false);
-                        tr.start();
+                        //tr.start();
                     }
                 }
             }
             try {
                 Thread.sleep(50);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                //e.printStackTrace();
             }
         }
     }

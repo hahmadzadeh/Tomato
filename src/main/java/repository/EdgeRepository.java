@@ -73,4 +73,9 @@ public class EdgeRepository implements Repository<Neighbour> {
             connection.commit();
         }
     }
+
+    @Override
+    public Neighbour read(int id) throws SQLException {
+        return null;
+    }
 }

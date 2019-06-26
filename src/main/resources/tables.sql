@@ -55,7 +55,9 @@ CREATE TABLE tomato."Node"
     find_count integer,
     state smallint,
     fragment_id character varying COLLATE pg_catalog."default",
-    best_weight character varying COLLATE pg_catalog."default"
+    best_weight character varying COLLATE pg_catalog."default",
+    iid integer NOT NULL DEFAULT nextval('"Node_iid_seq"'::regclass),
+    CONSTRAINT "Node_pkey" PRIMARY KEY (iid)
 )
 WITH (
     OIDS = FALSE
@@ -67,3 +69,7 @@ ALTER TABLE tomato."Node"
 
 -----------------------------------------------------
 ALTER TABLE tomato."Node" ADD COLUMN iid SERIAL PRIMARY KEY;
+
+ALTER SEQUENCE "Node_iid_seq" RESTART WITH 1;
+
+UPDATE "Node" SET iid=nextval('"Node_iid_seq"');

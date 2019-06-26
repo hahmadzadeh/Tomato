@@ -21,9 +21,13 @@ public class Edge implements Comparable<Edge> {
     }
 
     public static Edge buildFromString(String input) {
-        String[] split = input.split("#");
-        return new Edge(Double.parseDouble(split[2]), Integer.parseInt(split[0]),
-            Integer.parseInt(split[1]));
+        try {
+            String[] split = input.split("#");
+            return new Edge(Double.parseDouble(split[2]), Integer.parseInt(split[0]),
+                    Integer.parseInt(split[1]));
+        }catch (Exception e){
+            return null;
+        }
     }
 
     public Edge() {
@@ -44,8 +48,8 @@ public class Edge implements Comparable<Edge> {
     @Override
     public String toString() {
         return "{" + " edge='" + weight + "'" + ", smallerID='" + smallerID + "'" + ", biggerID='"
-            + biggerID + "'"
-            + "}";
+                + biggerID + "'"
+                + "}";
     }
 
     public String serialized() {

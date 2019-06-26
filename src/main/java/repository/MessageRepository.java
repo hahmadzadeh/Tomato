@@ -25,4 +25,9 @@ public class MessageRepository implements Repository<Message> {
     public void updateBatch(List<Message> listEntity) throws SQLException {
 
     }
+
+    @Override
+    public Message read(int id) throws SQLException {
+        return null;
+    }
 }
