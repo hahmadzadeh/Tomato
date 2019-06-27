@@ -43,8 +43,8 @@ public class MessageCacheQueue extends Cache implements MessageQueue {
         try (Jedis jedis = jedisPool.getResource()) {
             try {
                 String rpop = jedis.lpop("msg%%" + id);
-                jedis.lpush("dMsg%%" + id, rpop);
-                System.out.println(rpop);
+                //jedis.lpush("dMsg%%" + id, rpop);
+                //System.out.println(rpop);
                 return rpop == null ? null : mapper.readValue(rpop, Message.class);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -55,6 +55,7 @@ public class MessageCacheQueue extends Cache implements MessageQueue {
 
     @Override
     public void push(int id, Message message, boolean isNew) {
+        System.out.println(isNew + " " + message);
         try (Jedis jedis = jedisPool.getResource()) {
             try {
                 jedis.rpush("msg%%" + id, mapper.writeValueAsString(message));
@@ -86,22 +87,27 @@ public class MessageCacheQueue extends Cache implements MessageQueue {
 
     @Override
     public Queue<Message> getAll(int id) {
-        try (Jedis jedis = jedisPool.getResource()) {
-            Stream<String> stream = jedis.lrange("msg%%" + id, 0, -1).stream();
-            List<String> ids = stream.collect(Collectors.toList());
-            ids.forEach(e -> jedis.rpush("dmgs%%" + id, e));
-            List<Message> collect = ids
-                    .stream().map(e -> {
-                        try {
-                            return mapper.readValue(e, Message.class);
-                        } catch (IOException e1) {
-                            e1.printStackTrace();
-                        }
-                        return null;
-                    }).filter(Objects::nonNull).collect(Collectors.toList());
-            jedis.del("msg%%" + id);
-            return new LinkedBlockingQueue<>(collect);
+//            Stream<String> stream = jedis.lrange("msg%%" + id, 0, -1).stream();
+//            List<String> ids = stream.collect(Collectors.toList());
+//            ids.forEach(e -> jedis.lpush("dmgs%%" + id, e));
+//            List<Message> collect = ids
+//                    .stream().map(e -> {
+//                        try {
+//                            return mapper.readValue(e, Message.class);
+//                        } catch (IOException e1) {
+//                            e1.printStackTrace();
+//                        }
+//                        return null;
+//                    }).filter(Objects::nonNull).collect(Collectors.toList());
+//            jedis.del("msg%%" + id);
+//            return new LinkedBlockingQueue<>(collect);
+        LinkedBlockingQueue<Message> queue = new LinkedBlockingQueue<>();
+        Message pop = pop(id);
+        while (pop != null){
+            queue.add(pop);
+            pop = pop(id);
         }
+        return queue;
     }
 
     @Override

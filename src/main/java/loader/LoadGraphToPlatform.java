@@ -31,7 +31,7 @@ public class LoadGraphToPlatform {
         }
     }
 
-    public void initialLoadFromTextFile(String filename) throws IOException{
+    public int initialLoadFromTextFile(String filename) throws IOException {
         InputStream resourceAsStream = LoadGraphToPlatform.class.getResourceAsStream(filename);
         BufferedReader buff = new BufferedReader(new InputStreamReader(resourceAsStream));
         String e;
@@ -39,7 +39,7 @@ public class LoadGraphToPlatform {
 //        Files.lines(Paths.get(LoadGraphToPlatform.class.getResource(filename).toURI()))
 //                .parallel().forEach(e -> {
             String[] line = e.split(" ");
-            if(line[0].equals(line[1])){
+            if (line[0].equals(line[1])) {
                 continue;
             }
             if (!nodeCache.exist(Integer.parseInt(line[0]))) {
@@ -59,11 +59,15 @@ public class LoadGraphToPlatform {
         neighbourCache.counter.set(0);
         neighbourCache.flush("edge%%", Neighbour.class, neighbourCache.edgeRepository, true);
         nodeCache.flush("node%%", Node.class, nodeCache.nodeRepository, true);
+        int size;
         try (Jedis jedis = MessageCacheQueue.jedisPool.getResource()) {
             Set<String> keys = jedis.keys("cc%%*");
+            size = keys.size();
             for (String key : keys) {
                 jedis.del(key);
             }
         }
+        return size;
+
     }
 }

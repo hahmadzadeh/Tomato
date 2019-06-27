@@ -74,4 +74,12 @@ public class Neighbour implements Comparable<Neighbour> {
         }
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if(obj == null){
+            return false;
+        }
+        Neighbour neighbour = (Neighbour) obj;
+        return neighbour.source == source && neighbour.destination == destination;
+    }
 }

@@ -83,6 +83,9 @@ public class Node implements Callable<Node> {
 
 
     public Node call() {
+        if(id == 4){
+            System.out.println("bia");
+        }
         isRunning = true;
 
         if (state == SLEEPING) {
@@ -112,7 +115,7 @@ public class Node implements Callable<Node> {
                     Message msg = capturedMessages.poll();
                     assert (msg.receiverID == id);
 
-                    // System.out.println("id " + id + ": executing " + msg.timestamp);
+                     System.out.println("id " + id + ": executing " + msg);
 
                     switch (msg.type) {
                         case Message.ACCEPT:
@@ -187,7 +190,7 @@ public class Node implements Callable<Node> {
                 findCount++;
             }
             ///// ADD this to GHS
-            if (testEdge == sender) {
+            if (sender.equals(testEdge)) {
                 testEdge = null;
                 if (state == FIND) {
                     test();
@@ -203,6 +206,8 @@ public class Node implements Callable<Node> {
 
     public void receivedInitiate(int senderLevel, Edge senderFragmentId, byte senderState,
         int neighbourID) {
+        if(neighbourID == 3 && id == 4)
+            System.out.println("Hello");
         Neighbour sender = Neighbour.getNeighbourById(neighbourID, this.neighbours);
         assert (sender != null) : "wrong message. neighbour not foud.";
         assert (state != SLEEPING) : "should not receive in this state";
@@ -210,13 +215,16 @@ public class Node implements Callable<Node> {
         this.level = senderLevel;
         this.fragmentId = senderFragmentId;
         inBranch = sender;
+        // Be Careful!
+        sender.type = Neighbour.BRANCH;
+        // Caution !!
         bestEdge = null;
         bestWeight = Edge.INFINITY;
         for (Neighbour neighbour : neighbours) {
             if (neighbour.type != Neighbour.BRANCH) {
                 continue;
             }
-            if (neighbour == sender) {
+            if (neighbour.equals(sender)) {
                 continue;
             }
             sendInitiate(neighbour, true);
@@ -261,7 +269,7 @@ public class Node implements Callable<Node> {
             if (sender.type == Neighbour.BASIC) {
                 sender.type = Neighbour.REJECTED;
             }
-            if (testEdge != sender) {
+            if (!sender.equals(testEdge)) {
                 sendReject(sender);
             } else {
                 test();
@@ -302,8 +310,11 @@ public class Node implements Callable<Node> {
         Neighbour sender = Neighbour.getNeighbourById(neighbourID, this.neighbours);
         assert (sender != null) : "wrong message. neighbour not foud.";
 
-        if (sender != inBranch) {
+        if (!sender.equals(inBranch)) {
             findCount--;
+            if (findCount < 0) {
+                System.out.println("Hello");
+            }
             if (bestWeight.compareTo(edge) > 0) {
                 bestWeight = edge;
                 bestEdge = sender;
@@ -337,30 +348,30 @@ public class Node implements Callable<Node> {
 
     private void sendChangeCore(Neighbour bestEdge2) {
         Message msg = new Message(id, bestEdge2.destination, Message.CHANGE_CORE,
-            (int) System.nanoTime());
+             System.nanoTime());
         msgQueue.push(msg.receiverID, msg, true);
     }
 
     private void sendReport(Edge bestEdge) {
         assert (inBranch != null);
         Message msg = new Message(id, inBranch.destination, Message.REPORT,
-            (int) System.nanoTime());
+             System.nanoTime());
         msg.edge = bestEdge;
         msgQueue.push(msg.receiverID, msg, true);
     }
 
     private void sendReject(Neighbour sender) {
-        Message msg = new Message(id, sender.destination, Message.REJECT, (int) System.nanoTime());
+        Message msg = new Message(id, sender.destination, Message.REJECT,  System.nanoTime());
         msgQueue.push(msg.receiverID, msg, true);
     }
 
     private void sendAccept(Neighbour sender) {
-        Message msg = new Message(id, sender.destination, Message.ACCEPT, (int) System.nanoTime());
+        Message msg = new Message(id, sender.destination, Message.ACCEPT,  System.nanoTime());
         msgQueue.push(msg.receiverID, msg, true);
     }
 
     private void sendTest(Neighbour m) {
-        Message msg = new Message(id, m.destination, Message.TEST, (int) System.nanoTime());
+        Message msg = new Message(id, m.destination, Message.TEST,  System.nanoTime());
         msg.level = level;
         msg.fragmentID = fragmentId;
         msgQueue.push(msg.receiverID, msg, true);
@@ -368,7 +379,7 @@ public class Node implements Callable<Node> {
 
     private void sendInitiate(Neighbour receiver, boolean selfInfo) {
         Message msg = new Message(id, receiver.destination, Message.INITIATE,
-            (int) System.nanoTime());
+            System.nanoTime());
         if (selfInfo) {
             msg.level = level;
             msg.fragmentID = fragmentId;
@@ -382,7 +393,7 @@ public class Node implements Callable<Node> {
     }
 
     private void sendConnect(Neighbour m) {
-        Message msg = new Message(id, m.destination, Message.CONNECT, (int) System.nanoTime());
+        Message msg = new Message(id, m.destination, Message.CONNECT,  System.nanoTime());
         msg.level = level;
         msgQueue.push(msg.receiverID, msg, true);
     }
