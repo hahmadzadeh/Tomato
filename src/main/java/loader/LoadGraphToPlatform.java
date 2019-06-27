@@ -11,7 +11,6 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.URISyntaxException;
 import java.util.Properties;
 import java.util.Set;
 
@@ -25,7 +24,6 @@ public class LoadGraphToPlatform {
     public LoadGraphToPlatform(NodeCache nodeCache, NeighbourCache neighbourCache) {
         this.properties = new Properties();
         try (InputStream in = LoadGraphToPlatform.class.getResourceAsStream("/config.properties")) {
-            System.out.println(in);
             properties.load(in);
             this.nodeCache = nodeCache;
             this.neighbourCache = neighbourCache;

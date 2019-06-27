@@ -23,7 +23,7 @@ public class Edge implements Comparable<Edge> {
     public static Edge buildFromString(String input) {
         try {
             String[] split = input.split("#");
-            return new Edge(Double.parseDouble(split[2]), Integer.parseInt(split[0]),
+            return new Edge(Double.parseDouble(split[0]), Integer.parseInt(split[2]),
                     Integer.parseInt(split[1]));
         }catch (Exception e){
             return null;

@@ -21,42 +21,39 @@ public class Main {
     public static void main(String[] args)
         throws IOException, SQLException, ExecutionException, InterruptedException {
         JedisPool pool = MessageCacheQueue.jedisPool;
-        NodeRepository nodeRepository = new NodeRepository();
         EdgeRepository edgeRepository = new EdgeRepository();
+        NodeRepository nodeRepository = new NodeRepository(edgeRepository);
         NodeCache nodeCache = new NodeCache(nodeRepository);
         NeighbourCache neighbourCache = new NeighbourCache(edgeRepository);
         LoadGraphToPlatform loadGraphToPlatform = new LoadGraphToPlatform(nodeCache,
             neighbourCache);
-        loadGraphToPlatform.initialLoadFromTextFile("/test");
+        loadGraphToPlatform.initialLoadFromTextFile("/input4");
         LinkedList<String> nodeQueue = new LinkedList<>();
         MessageCacheQueue messageCacheQueue = new MessageCacheQueue();
         int first = 0;
-        int last = 10;
-        int step = 10;
-        int graphSize = 100;
-        int numThreads = 20;
+        int step = 4;
+        int graphSize = 11;
+        int numThreads = 1;
         ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
-        List<Future<Boolean>> slavesResult = new LinkedList<>();
+        List<Future<Node>> slavesResult = new LinkedList<>();
         while (true) {
             try (Jedis jedis = pool.getResource()) {
                 for (int i = 0; i < numThreads; i++) {
                     if (nodeQueue.isEmpty()) {
                         nodeCache.flush("node%%", Node.class, nodeRepository, false);
-                        nodeRepository.loadTrivial(first, last);
+                        nodeRepository.loadTrivial(first, first + step);
                         nodeQueue.addAll(jedis.keys("node%%*"));
+                        first += step;
+                        first %= graphSize;
                     }
                     String key = nodeQueue.poll();
                     Node node = nodeCache.getNode(key);
                     node.msgQueue = messageCacheQueue;
                     slavesResult.add(executorService.submit(node));
                 }
-                for (Future<Boolean> future : slavesResult) {
-                    future.get();
+                for (Future<Node> future : slavesResult) {
+                    nodeCache.addNode(future.get());
                 }
-                first += step;
-                last += step;
-                first %= graphSize;
-                last %= graphSize;
             }
         }
     }

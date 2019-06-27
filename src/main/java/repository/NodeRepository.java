@@ -37,6 +37,11 @@ public class NodeRepository implements Repository<Node> {
     private final String selectNodeDdl = "SELECT * FROM tomato.\"Node\" WHERE id=?";
     private final String selectEdgeDdl = "SELECT * FROM tomato.\"Neighbour\" WHERE source=?";
     private final ObjectMapper mapper = new ObjectMapper();
+    private EdgeRepository edgeRepository;
+
+    public NodeRepository(EdgeRepository edgeRepository){
+        this.edgeRepository = edgeRepository;
+    }
 
 
     @Override
@@ -71,6 +76,9 @@ public class NodeRepository implements Repository<Node> {
             while (resultSet.next()) {
                 tempNodes.add(buildTempNodeFromResultSet(resultSet));
             }
+            if(tempNodes.size() == 0){
+                return;
+            }
             StringBuilder sb = new StringBuilder();
             sb.append(selectEdgeTrivialDdl);
             for (int i = 0; i < tempNodes.size(); i++) {
@@ -89,7 +97,7 @@ public class NodeRepository implements Repository<Node> {
                 neighbours.get(neighbour.source).put(neighbour.destination, neighbour);
             }
             List<Node> nodes = new LinkedList<>();
-            for (TempNode tempNode: tempNodes) {
+            for (TempNode tempNode : tempNodes) {
                 nodes.add(buildNodeFromTempNode(tempNode, neighbours.get(tempNode.id)));
             }
             try (Jedis jedis = pool.getResource()) {
@@ -114,8 +122,10 @@ public class NodeRepository implements Repository<Node> {
                 setNodeStatement(statement, entity);
                 statement.addBatch();
             }
-            statement.executeBatch();
-            connection.commit();
+            if (listEntity.size() != 0) {
+                statement.executeBatch();
+                connection.commit();
+            }
         }
     }
 
@@ -124,13 +134,19 @@ public class NodeRepository implements Repository<Node> {
         try (Connection connection = JdbcDataSource
                 .getConnection(); PreparedStatement statement = connection.prepareStatement
                 (updateDdl)) {
+            connection.setAutoCommit(false);
+            List<Neighbour> neighbours = new LinkedList<>();
+            listEntity.forEach(e -> neighbours.addAll(e.neighbours));
+            edgeRepository.updateBatch(neighbours);
             for (Node node : listEntity) {
                 setNodeStatement(statement, node);
                 statement.setInt(10, node.id);
                 statement.addBatch();
             }
-            statement.executeBatch();
-            connection.commit();
+            if (listEntity.size() != 0) {
+                statement.executeBatch();
+                connection.commit();
+            }
         }
     }
 
@@ -194,7 +210,7 @@ public class NodeRepository implements Repository<Node> {
     private Node buildNodeFromResultSet(ResultSet resultSet, HashMap<Integer, Neighbour> map)
             throws SQLException {
         TempNode tempNode = buildTempNodeFromResultSet(resultSet);
-        return  buildNodeFromTempNode(tempNode, map);
+        return buildNodeFromTempNode(tempNode, map);
     }
 
     private Node buildNodeFromTempNode(TempNode tempNode, HashMap<Integer, Neighbour> map) {

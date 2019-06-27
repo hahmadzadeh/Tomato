@@ -25,9 +25,7 @@ public class Cache<T> {
 
     public Cache() {
         this.properties = new Properties();
-        try (
-                InputStream in = LoadGraphToPlatform.class.getResourceAsStream("/config.properties")) {
-            System.out.println(in);
+        try (InputStream in = LoadGraphToPlatform.class.getResourceAsStream("/config.properties")) {
             properties.load(in);
             this.cacheSize = Integer.parseInt(properties.getProperty("cacheSize"));
             this.cacheSizeMsg = Integer.parseInt(properties.getProperty("cacheSizeMsg"));
@@ -37,13 +35,13 @@ public class Cache<T> {
         }
     }
 
-    public void flush(String keyPrefix, Class<T> tClass, Repository<T> repository , boolean isnew) {
+    public void flush(String keyPrefix, Class<T> tClass, Repository<T> repository, boolean isnew) {
         synchronized (this) {
-            if (this.counter.get() % this.cacheSize == 0) {
+            if (this.counter.get() % this.cacheSize == 0 || !isnew) {
                 try (Jedis jedis = pool.getResource()) {
                     List<T> entityList = new LinkedList<>();
                     Set<String> keys = jedis.keys(keyPrefix + "*");
-                    for (String key: keys) {
+                    for (String key : keys) {
                         if (keyPrefix.equals("node%%")) {
                             String entityString = jedis.get(key);
                             T entity = mapper.readValue(entityString, tClass);
@@ -57,10 +55,11 @@ public class Cache<T> {
                         }
                         jedis.del(key);
                     }
-                    if(isnew)
+                    if (isnew)
                         repository.saveBatch(entityList);
-                    else
+                    else {
                         repository.updateBatch(entityList);
+                    }
                     this.counter.incrementAndGet();
                 } catch (IOException | SQLException e) {
                     e.printStackTrace();

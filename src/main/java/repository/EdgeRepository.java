@@ -12,23 +12,23 @@ import java.util.List;
 public class EdgeRepository implements Repository<Neighbour> {
 
     private final static String insertEdgeDDL = "INSERT INTO tomato.\"Neighbour\"(\n" +
-        "\tsource, dest, type, weight)\n" +
-        "\tVALUES (?, ?, ?, ?)";
+            "\tsource, dest, type, weight)\n" +
+            "\tVALUES (?, ?, ?, ?)";
     private final static String updateEdgeDDL = "UPDATE tomato.\"Neighbour\"\n" +
-        "\tSET source=?, dest=?, type=?, weight=?\n" +
-        "\tWHERE source=?";
+            "\tSET source=?, dest=?, type=?, weight=?\n" +
+            "\tWHERE source=? and dest=?";
 
     @Override
     public void save(Neighbour entity) throws SQLException {
         try (Connection connection = JdbcDataSource.getConnection();
-            PreparedStatement statement = connection.prepareStatement(insertEdgeDDL)) {
+             PreparedStatement statement = connection.prepareStatement(insertEdgeDDL)) {
             setEdgeStatement(entity, statement);
             statement.execute();
         }
     }
 
     private void setEdgeStatement(Neighbour entity, PreparedStatement statement)
-        throws SQLException {
+            throws SQLException {
         statement.setInt(1, entity.source);
         statement.setInt(2, entity.destination);
         statement.setByte(3, entity.type);
@@ -38,9 +38,10 @@ public class EdgeRepository implements Repository<Neighbour> {
     @Override
     public void update(Neighbour entity) throws SQLException {
         try (Connection connection = JdbcDataSource.getConnection();
-            PreparedStatement statement = connection.prepareStatement(updateEdgeDDL)) {
+             PreparedStatement statement = connection.prepareStatement(updateEdgeDDL)) {
             setEdgeStatement(entity, statement);
             statement.setInt(5, entity.source);
+            statement.setInt(6, entity.destination);
             statement.execute();
         }
     }
@@ -48,29 +49,34 @@ public class EdgeRepository implements Repository<Neighbour> {
     @Override
     public void saveBatch(List<Neighbour> listEntity) throws SQLException {
         try (Connection connection = JdbcDataSource.getConnection();
-            PreparedStatement statement = connection.prepareStatement(insertEdgeDDL)) {
+             PreparedStatement statement = connection.prepareStatement(insertEdgeDDL)) {
             connection.setAutoCommit(false);
-            for(Neighbour entity: listEntity){
+            for (Neighbour entity : listEntity) {
                 setEdgeStatement(entity, statement);
                 statement.addBatch();
             }
-            statement.executeBatch();
-            connection.commit();
+            if (listEntity.size() != 0) {
+                statement.executeBatch();
+                connection.commit();
+            }
         }
     }
 
     @Override
     public void updateBatch(List<Neighbour> listEntity) throws SQLException {
         try (Connection connection = JdbcDataSource.getConnection();
-            PreparedStatement statement = connection.prepareStatement(updateEdgeDDL)) {
+             PreparedStatement statement = connection.prepareStatement(updateEdgeDDL)) {
             connection.setAutoCommit(false);
-            for(Neighbour entity: listEntity){
+            for (Neighbour entity : listEntity) {
                 setEdgeStatement(entity, statement);
                 statement.setInt(5, entity.source);
+                statement.setInt(6, entity.destination);
                 statement.addBatch();
             }
-            statement.executeBatch();
-            connection.commit();
+            if (listEntity.size() != 0) {
+                statement.executeBatch();
+                connection.commit();
+            }
         }
     }
 

@@ -42,6 +42,7 @@ public class NodeCache extends Cache<Node> {
     public Node getNode(String id) {
         try (Jedis jedis = pool.getResource()) {
             String s = jedis.get(id);
+            jedis.del(id);
             return s == null ? null : mapper.readValue(s, Node.class);
         } catch (IOException e) {
             e.printStackTrace();

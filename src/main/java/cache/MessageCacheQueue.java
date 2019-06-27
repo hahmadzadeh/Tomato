@@ -42,7 +42,7 @@ public class MessageCacheQueue extends Cache implements MessageQueue {
     public Message pop(int id) {
         try (Jedis jedis = jedisPool.getResource()) {
             try {
-                String rpop = jedis.rpop("msg%%" + id);
+                String rpop = jedis.lpop("msg%%" + id);
                 jedis.lpush("dMsg%%" + id, rpop);
                 System.out.println(rpop);
                 return rpop == null ? null : mapper.readValue(rpop, Message.class);
@@ -57,7 +57,7 @@ public class MessageCacheQueue extends Cache implements MessageQueue {
     public void push(int id, Message message, boolean isNew) {
         try (Jedis jedis = jedisPool.getResource()) {
             try {
-                jedis.lpush("msg%%" + id, mapper.writeValueAsString(message));
+                jedis.rpush("msg%%" + id, mapper.writeValueAsString(message));
             } catch (JsonProcessingException e) {
                 e.printStackTrace();
             }
@@ -98,7 +98,7 @@ public class MessageCacheQueue extends Cache implements MessageQueue {
                             e1.printStackTrace();
                         }
                         return null;
-                    }).filter(Objects::isNull).collect(Collectors.toList());
+                    }).filter(Objects::nonNull).collect(Collectors.toList());
             jedis.del("msg%%" + id);
             return new LinkedBlockingQueue<>(collect);
         }

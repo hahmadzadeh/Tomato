@@ -11,7 +11,7 @@ import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class Node implements Callable<Boolean> {
+public class Node implements Callable<Node> {
 
     public static final byte SLEEPING = 0X01;
     public static final byte FOUND = 0X02;
@@ -66,6 +66,7 @@ public class Node implements Callable<Boolean> {
         Node node = new Node();
         node.id = Integer.parseInt(id);
         node.state = SLEEPING;
+        node.bestWeight = Edge.INFINITY;
         return node;
     }
 
@@ -81,7 +82,7 @@ public class Node implements Callable<Boolean> {
     }
 
 
-    public Boolean call() {
+    public Node call() {
         isRunning = true;
 
         if (state == SLEEPING) {
@@ -152,7 +153,7 @@ public class Node implements Callable<Boolean> {
         }
 
         isRunning = false;
-        return true;
+        return this;
     }
 
     public void wakeup() {
