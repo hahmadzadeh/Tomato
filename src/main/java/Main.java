@@ -41,14 +41,14 @@ public class Main {
         NeighbourCache neighbourCache = new NeighbourCache(edgeRepository);
         LoadGraphToPlatform loadGraphToPlatform = new LoadGraphToPlatform(nodeCache,
             neighbourCache);
-        int graphSize = loadGraphToPlatform.initialLoadFromTextFile("/input4");
+        int graphSize = loadGraphToPlatform.initialLoadFromTextFile("/test");
         LinkedList<String> nodeQueue = new LinkedList<>();
 
         MessageCacheQueue messageCacheQueue = new MessageCacheQueue();
         int first = 0;
-        int step = 20;
+        int step = 101;
 
-        int numThreads = 10;
+        int numThreads = 100;
         ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
         List<Future<Node>> slavesResult = new LinkedList<>();
         while (true) {
@@ -58,7 +58,7 @@ public class Main {
                     nodeRepository.loadTrivial(first, first + step);
                     nodeQueue.addAll(jedis.keys("node%%*"));
                     first += step;
-                    first %= graphSize;
+                    first = first > graphSize ? 0 : first;
                 }
                 for (int i = 0; i < numThreads; i++) {
                     if(nodeQueue.isEmpty()){
@@ -70,9 +70,10 @@ public class Main {
                     slavesResult.add(executorService.submit(node));
                 }
                 for (Future<Node> future : slavesResult) {
-                    nodeCache.addNode(future.get());
+                    nodeCache.addNode(future.get(), false);
                 }
                 slavesResult.clear();
+                //nodeCache.flush("node%%", Node.class, nodeRepository, false);
             }
         }
     }

@@ -16,10 +16,10 @@ public class NodeCache extends Cache<Node> {
         this.nodeRepository = nodeRepository;
     }
 
-    public void addNode(Node node) {
+    public void addNode(Node node, boolean isnew) {
         try (Jedis jedis = pool.getResource()) {
             if (this.counter.get() % this.cacheSize == 0) {
-                flush("node%%", Node.class, nodeRepository, true);
+                flush("node%%", Node.class, nodeRepository, isnew);
             }
             this.counter.incrementAndGet();
             jedis.set("node%%" + node.id, mapper.writeValueAsString(node));

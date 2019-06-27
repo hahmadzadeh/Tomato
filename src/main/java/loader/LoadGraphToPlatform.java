@@ -44,11 +44,11 @@ public class LoadGraphToPlatform {
             }
             if (!nodeCache.exist(Integer.parseInt(line[0]))) {
                 Node node = Node.build_NodeTemplate(line[0]);
-                nodeCache.addNode(node);
+                nodeCache.addNode(node, true);
             }
             if (!nodeCache.exist(Integer.parseInt(line[1]))) {
                 Node node = Node.build_NodeTemplate(line[1]);
-                nodeCache.addNode(node);
+                nodeCache.addNode(node, true);
             }
             Neighbour neighbour = new Neighbour(Integer.parseInt(line[0]), Integer.parseInt(line[1]), Double.parseDouble(line[2]), Neighbour.BASIC);
             Neighbour neighbour1 = new Neighbour(Integer.parseInt(line[1]), Integer.parseInt(line[0]), Double.parseDouble(line[2]), Neighbour.BASIC);

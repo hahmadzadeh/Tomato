@@ -339,6 +339,7 @@ public class Node implements Callable<Node> {
         } else {
             sendConnect(bestEdge);
             bestEdge.type = Neighbour.BRANCH;
+            Neighbour.getNeighbourById(bestEdge.destination, neighbours).type = Neighbour.BRANCH;
         }
     }
 
