@@ -63,12 +63,12 @@ public class Main {
         List<Future<Node>> slavesResult = new LinkedList<>();
         beginning_time_millis = System.currentTimeMillis();
         while (true) {
-            if (Node.halt_num == graphSize) {
-                System.out.println("Finish");
-                break;
-            }
 
             try (Jedis jedis = pool.getResource()) {
+                if (jedis.keys("finishNode%%*").size() == graphSize) {
+                    System.out.println("Finish");
+                    break;
+                }
                 if (nodeQueue.isEmpty()) {
                     nodeCache.flush("node%%", Node.class, nodeRepository, false);
                     nodeRepository.loadTrivial(first, first + step);
@@ -77,7 +77,7 @@ public class Main {
                     first = first > graphSize ? 0 : first;
                 }
                 for (int i = 0; i < numThreads; i++) {
-                    if(nodeQueue.isEmpty()){
+                    if (nodeQueue.isEmpty()) {
                         break;
                     }
                     String key = nodeQueue.poll();

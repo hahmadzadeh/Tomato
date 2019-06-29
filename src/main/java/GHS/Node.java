@@ -1,7 +1,12 @@
 package GHS;
 
+import cache.MessageCacheQueue;
 import cache.MessageQueue;
+import cache.NodeCache;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPool;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -29,6 +34,8 @@ public class Node implements Callable<Node> {
     private Queue<Message> returnedMessages = new LinkedList<>();
     @JsonIgnore
     public boolean hasNewMessages = true;
+    @JsonIgnore
+    public NodeCache nodeCache;
     @JsonIgnore
     public boolean isRunning = false;
 
@@ -392,7 +399,10 @@ public class Node implements Callable<Node> {
         }
 
         synchronized (Node.class) {
-            halt_num ++;
+            JedisPool pool = MessageCacheQueue.jedisPool;
+            try(Jedis jedis = pool.getResource()) {
+                jedis.set("finishNode%%" + id, "True");
+            }
         }
 //        System.out.println(id + "-- halt");
 //        System.out.println("exec Time until now : " + (System.currentTimeMillis() - beginning_time_millis));
