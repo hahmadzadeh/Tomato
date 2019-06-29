@@ -23,7 +23,6 @@ public class NodeCache extends Cache<Node> {
             }
             this.counter.incrementAndGet();
             jedis.set("node%%" + node.id, mapper.writeValueAsString(node));
-            jedis.set("cc%%" + node.id, "1");
         } catch (JsonProcessingException e) {
             e.printStackTrace();
         }
@@ -54,6 +53,12 @@ public class NodeCache extends Cache<Node> {
         try (Jedis jedis = pool.getResource()) {
             String s = jedis.get("cc%%" + id);
             return s != null;
+        }
+    }
+
+    public void addExistence(int id) {
+        try(Jedis jedis = pool.getResource()){
+            jedis.set("cc%%" + id, "1");
         }
     }
 }

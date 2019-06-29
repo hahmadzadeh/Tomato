@@ -17,5 +17,4 @@ public interface MessageQueue {
 
     Queue<Message> getAll(int id);
 
-    ConcurrentLinkedQueue<Message> addNewNode(int id);
 }

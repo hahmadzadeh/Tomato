@@ -1,18 +1,22 @@
+import GHS.Edge;
 import GHS.Node;
 import cache.MessageCacheQueue;
 import cache.NeighbourCache;
 import cache.NodeCache;
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+
+import java.io.*;
+import java.sql.*;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Scanner;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
 import loader.LoadGraphToPlatform;
+import org.postgresql.copy.CopyManager;
+import org.postgresql.core.BaseConnection;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import repository.EdgeRepository;
@@ -22,32 +26,35 @@ import utils.JdbcDataSource;
 public class Main {
 
     public static void main(String[] args)
-        throws IOException, SQLException, ExecutionException, InterruptedException {
+            throws IOException, SQLException, ExecutionException, InterruptedException {
+        System.out.println("You want to load new graph??[y/n]");
+        Scanner scanner = new Scanner(System.in);
+        String s = scanner.nextLine();
         JedisPool pool = MessageCacheQueue.jedisPool;
-        try (Jedis jedis = pool.getResource()){
-            jedis.flushAll();
-        }
-        String deleteNeighbour = "delete from tomato.\"Neighbour\" where 1=1";
-        String deleteNode = "delete from tomato.\"Node\" where 1=1";
-        String restartSeq = "ALTER SEQUENCE tomato.\"Node_iid_seq\" RESTART WITH 1;\n";
-        try (Connection connection = JdbcDataSource.getConnection()){
-            connection.prepareStatement(deleteNeighbour).execute();
-            connection.prepareStatement(deleteNode).execute();
-            connection.prepareStatement(restartSeq).execute();
+        int graphSize = 100;
+        if (s.toUpperCase().equals("Y")) {
+            LoadGraphToPlatform loadGraphToPlatform = new LoadGraphToPlatform();
+            System.out.println("Please enter file name:");
+            String filename = scanner.nextLine();
+            try (Jedis jedis = pool.getResource()) {
+                jedis.flushAll();
+            }
+            graphSize = loadGraphToPlatform.initialLoadFromTextFile("/" + filename);
+        } else {
+            String graphSizeQuery = "Select Count(*) from tomato.\"Node\"";
+            try (Connection connection = JdbcDataSource.getConnection(); PreparedStatement ps = connection.prepareStatement(graphSizeQuery)) {
+                ResultSet resultSet = ps.executeQuery();
+                resultSet.next();
+                graphSize = resultSet.getInt(1);
+            }
         }
         EdgeRepository edgeRepository = new EdgeRepository();
         NodeRepository nodeRepository = new NodeRepository(edgeRepository);
         NodeCache nodeCache = new NodeCache(nodeRepository);
-        NeighbourCache neighbourCache = new NeighbourCache(edgeRepository);
-        LoadGraphToPlatform loadGraphToPlatform = new LoadGraphToPlatform(nodeCache,
-            neighbourCache);
-        int graphSize = loadGraphToPlatform.initialLoadFromTextFile("/input4");
         LinkedList<String> nodeQueue = new LinkedList<>();
-
         MessageCacheQueue messageCacheQueue = new MessageCacheQueue();
         int first = 0;
-        int step = 50;
-
+        int step = 100;
         int numThreads = 25;
         ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
         List<Future<Node>> slavesResult = new LinkedList<>();
@@ -61,7 +68,7 @@ public class Main {
                     first = first > graphSize ? 0 : first;
                 }
                 for (int i = 0; i < numThreads; i++) {
-                    if(nodeQueue.isEmpty()){
+                    if (nodeQueue.isEmpty()) {
                         break;
                     }
                     String key = nodeQueue.poll();
@@ -73,7 +80,6 @@ public class Main {
                     nodeCache.addNode(future.get(), false);
                 }
                 slavesResult.clear();
-                //nodeCache.flush("node%%", Node.class, nodeRepository, false);
             }
         }
     }

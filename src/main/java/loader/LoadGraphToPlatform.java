@@ -1,73 +1,43 @@
 package loader;
 
-import GHS.Neighbour;
-import GHS.Node;
-import cache.MessageCacheQueue;
-import cache.NeighbourCache;
-import cache.NodeCache;
-import redis.clients.jedis.Jedis;
+
+import org.postgresql.copy.CopyManager;
+import org.postgresql.core.BaseConnection;
+import utils.JdbcDataSource;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.Properties;
-import java.util.Set;
-
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class LoadGraphToPlatform {
 
-    private Properties properties;
-    private NodeCache nodeCache;
-    private NeighbourCache neighbourCache;
+    public int initialLoadFromTextFile(String filename) throws SQLException, IOException {
+        String insertLeftEdge = "Insert Into tomato.\"Neighbour\" Select source, dest, 3, weight from tomato.\"edge_temp\" where source != dest";
+        String insertRightEdge = "Insert Into tomato.\"Neighbour\" Select dest, source, 3, weight from tomato.\"edge_temp\" where source != dest";
+        String insertNode = "Insert Into tomato.\"Node\" Select distinct(source) from tomato.\"Neighbour\" where source != dest";
+        String deleteNeighbour = "Truncate tomato.\"Neighbour\"";
+        String deleteNode = "Truncate tomato.\"Node\"";
+        String deleteEdge = "Truncate tomato.\"edge_temp\"";
+        String restartSeq = "ALTER SEQUENCE tomato.\"Node_iid_seq\" RESTART WITH 1;\n";
+        String graphSize = "Select Count(*) from tomato.\"Node\"";
+        try (Connection connection = JdbcDataSource.getConnection(); InputStream in = this.getClass().getResourceAsStream(filename)){
+            connection.prepareStatement(deleteNeighbour).execute();
+            connection.prepareStatement(deleteNode).execute();
+            connection.prepareStatement(restartSeq).execute();
+            connection.prepareStatement(deleteEdge).execute();
+            new CopyManager((BaseConnection) connection.getMetaData().getConnection()).copyIn("Copy tomato.\"edge_temp\" from STDIN with delimiter \' \'",
+                    new BufferedReader(new InputStreamReader(in)));
+            connection.prepareStatement(insertLeftEdge).execute();
+            connection.prepareStatement(insertRightEdge).execute();
+            connection.prepareStatement(insertNode).execute();
+            ResultSet resultSet = connection.prepareStatement(graphSize).executeQuery();
+            resultSet.next();
+            return resultSet.getInt(1);
 
-    public LoadGraphToPlatform(NodeCache nodeCache, NeighbourCache neighbourCache) {
-        this.properties = new Properties();
-        try (InputStream in = LoadGraphToPlatform.class.getResourceAsStream("/config.properties")) {
-            properties.load(in);
-            this.nodeCache = nodeCache;
-            this.neighbourCache = neighbourCache;
-        } catch (IOException e) {
         }
-    }
-
-    public int initialLoadFromTextFile(String filename) throws IOException {
-        InputStream resourceAsStream = LoadGraphToPlatform.class.getResourceAsStream(filename);
-        BufferedReader buff = new BufferedReader(new InputStreamReader(resourceAsStream));
-        String e;
-        while ((e = buff.readLine()) != null) {
-//        Files.lines(Paths.get(LoadGraphToPlatform.class.getResource(filename).toURI()))
-//                .parallel().forEach(e -> {
-            String[] line = e.split(" ");
-            if (line[0].equals(line[1])) {
-                continue;
-            }
-            if (!nodeCache.exist(Integer.parseInt(line[0]))) {
-                Node node = Node.build_NodeTemplate(line[0]);
-                nodeCache.addNode(node, true);
-            }
-            if (!nodeCache.exist(Integer.parseInt(line[1]))) {
-                Node node = Node.build_NodeTemplate(line[1]);
-                nodeCache.addNode(node, true);
-            }
-            Neighbour neighbour = new Neighbour(Integer.parseInt(line[0]), Integer.parseInt(line[1]), Double.parseDouble(line[2]), Neighbour.BASIC);
-            Neighbour neighbour1 = new Neighbour(Integer.parseInt(line[1]), Integer.parseInt(line[0]), Double.parseDouble(line[2]), Neighbour.BASIC);
-            neighbourCache.addNeighbour(neighbour);
-            neighbourCache.addNeighbour(neighbour1);
-        }
-        nodeCache.counter.set(0);
-        neighbourCache.counter.set(0);
-        neighbourCache.flush("edge%%", Neighbour.class, neighbourCache.edgeRepository, true);
-        nodeCache.flush("node%%", Node.class, nodeCache.nodeRepository, true);
-        int size;
-        try (Jedis jedis = MessageCacheQueue.jedisPool.getResource()) {
-            Set<String> keys = jedis.keys("cc%%*");
-            size = keys.size();
-            for (String key : keys) {
-                jedis.del(key);
-            }
-        }
-        return size;
-
     }
 }
