@@ -67,6 +67,7 @@ public class Node implements Callable<Node> {
         node.id = Integer.parseInt(id);
         node.state = SLEEPING;
         node.bestWeight = Edge.INFINITY;
+        node.findCount = -1;
         return node;
     }
 
@@ -83,9 +84,6 @@ public class Node implements Callable<Node> {
 
 
     public Node call() {
-        if(id == 4){
-            System.out.println("bia");
-        }
         isRunning = true;
 
         if (state == SLEEPING) {
@@ -190,12 +188,12 @@ public class Node implements Callable<Node> {
                 findCount++;
             }
             ///// ADD this to GHS
-            if (sender.equals(testEdge)) {
-                testEdge = null;
-                if (state == FIND) {
-                    test();
-                }
-            }
+//            if (sender.equals(testEdge)) {
+//                testEdge = null;
+//                if (state == FIND) {
+//                    test();
+//                }
+//            }
             ///// End
         } else if (sender.type == Neighbour.BASIC) {
             returnedMessages.add(inMsg);
@@ -206,14 +204,13 @@ public class Node implements Callable<Node> {
 
     public void receivedInitiate(int senderLevel, Edge senderFragmentId, byte senderState,
         int neighbourID) {
-        if(neighbourID == 3 && id == 4)
-            System.out.println("Hello");
         Neighbour sender = Neighbour.getNeighbourById(neighbourID, this.neighbours);
         assert (sender != null) : "wrong message. neighbour not foud.";
         assert (state != SLEEPING) : "should not receive in this state";
         this.state = senderState;
         this.level = senderLevel;
         this.fragmentId = senderFragmentId;
+        this.findCount = 0;
         inBranch = sender;
         // Be Careful!
         sender.type = Neighbour.BRANCH;
@@ -285,8 +282,8 @@ public class Node implements Callable<Node> {
         if (bestWeight.compareTo(sender.edge) > 0) {
             bestEdge = sender;
             bestWeight = sender.edge;
-            report();
         }
+        report();
     }
 
     public void receiveReject(int neighbourID) {
@@ -295,8 +292,8 @@ public class Node implements Callable<Node> {
 
         if (sender.type == Neighbour.BASIC) {
             sender.type = Neighbour.REJECTED;
-            test();
         }
+        test();
     }
 
     public void report() {
@@ -312,21 +309,14 @@ public class Node implements Callable<Node> {
 
         if (!sender.equals(inBranch)) {
             findCount--;
-            if (findCount < 0) {
-                System.out.println("Hello");
-            }
             if (bestWeight.compareTo(edge) > 0) {
                 bestWeight = edge;
                 bestEdge = sender;
             }
             report();
         } else if (state == FIND) {
-            // } else if (state == FIND /* ADD this to GHS */ && findCount != 1 /* End */) {
             returnedMessages.add(inMsg);
         } else if (bestWeight.compareTo(edge) < 0) {
-            ///// ADD this to GHS
-            // findCount--;
-            ///// End
             changeCore();
         } else if (edge.compareTo(bestWeight) == 0 && edge.compareTo(Edge.INFINITY) == 0) {
             finish();
@@ -334,11 +324,14 @@ public class Node implements Callable<Node> {
     }
 
     private void changeCore() {
+        if(bestEdge == null)
+            System.out.println();
         if (bestEdge.type == Neighbour.BRANCH) {
             sendChangeCore(bestEdge);
         } else {
             sendConnect(bestEdge);
             bestEdge.type = Neighbour.BRANCH;
+            assert Neighbour.getNeighbourById(bestEdge.destination, neighbours) != null;
             Neighbour.getNeighbourById(bestEdge.destination, neighbours).type = Neighbour.BRANCH;
         }
     }

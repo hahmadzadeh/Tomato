@@ -41,14 +41,14 @@ public class Main {
         NeighbourCache neighbourCache = new NeighbourCache(edgeRepository);
         LoadGraphToPlatform loadGraphToPlatform = new LoadGraphToPlatform(nodeCache,
             neighbourCache);
-        int graphSize = loadGraphToPlatform.initialLoadFromTextFile("/test");
+        int graphSize = loadGraphToPlatform.initialLoadFromTextFile("/input4");
         LinkedList<String> nodeQueue = new LinkedList<>();
 
         MessageCacheQueue messageCacheQueue = new MessageCacheQueue();
         int first = 0;
-        int step = 101;
+        int step = 50;
 
-        int numThreads = 100;
+        int numThreads = 25;
         ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
         List<Future<Node>> slavesResult = new LinkedList<>();
         while (true) {
