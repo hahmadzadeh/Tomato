@@ -4,3 +4,6 @@ target/*
 .classpath
 .settings/
 .project
+bin/
+tomato.iml
+dump.rdb
