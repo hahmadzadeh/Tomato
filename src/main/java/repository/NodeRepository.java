@@ -16,9 +16,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class NodeRepository implements Repository<Node> {
 
@@ -27,19 +26,29 @@ public class NodeRepository implements Repository<Node> {
                     +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
+    private final String insertNodeDdl2 =
+            "INSERT INTO tomato.\"Node2\" (ID, BEST_EDGE, TEST_EDGE, IN_BRANCH, LEVEL, FIND_COUNT, STATE, FRAGMENT_ID,  BEST_WEIGHT) "
+                    +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
     private final String updateDdl = "UPDATE tomato.\"Node\"\n" +
-            "\tSET id=?, best_edge=?, test_edge=?, in_branch=?, level=?, find_count=?, state=?, fragment_id=?, best_weight=?\n"
+            "\tSET best_edge=?, test_edge=?, in_branch=?, level=?, find_count=?, state=?, fragment_id=?, best_weight=?\n"
             +
             "\tWHERE id=?;";
 
-    private final String selectNodesTrivialDdl = "SELECT * FROM tomato.\"Node\" WHERE iid BETWEEN ? AND ?";
+    private final String selectNodesTrivialDdl = "SELECT * FROM tomato.\"Node\" WHERE iid >= ? and iid < ? ";
     private final String selectEdgeTrivialDdl = "SELECT * FROM tomato.\"Neighbour\" WHERE source IN (";
+
+    private final String selectNodesTrivialDdl2 = "SELECT * FROM tomato.\"Node2\" WHERE iid >= ? AND iid < ?";
+    private final String selectEdgeTrivialDdl2 = "SELECT * FROM tomato.\"Neighbour2\" WHERE source IN (";
+
     private final String selectNodeDdl = "SELECT * FROM tomato.\"Node\" WHERE id=?";
+    private final String selectNodeNeighboursDdl = "SELECT * FROM tomato.\"Node\" WHERE id IN (";
     private final String selectEdgeDdl = "SELECT * FROM tomato.\"Neighbour\" WHERE source=?";
     private final ObjectMapper mapper = new ObjectMapper();
     private EdgeRepository edgeRepository;
 
-    public NodeRepository(EdgeRepository edgeRepository){
+    public NodeRepository(EdgeRepository edgeRepository) {
         this.edgeRepository = edgeRepository;
     }
 
@@ -65,31 +74,16 @@ public class NodeRepository implements Repository<Node> {
         }
     }
 
-    public void loadTrivial(int first, int last) throws SQLException {
-        try (Connection connection = JdbcDataSource
-                .getConnection(); PreparedStatement psNode = connection.prepareStatement
-                (selectNodesTrivialDdl)) {
-            psNode.setInt(1, first);
-            psNode.setInt(2, last);
-            ResultSet resultSet = psNode.executeQuery();
-            List<TempNode> tempNodes = new LinkedList<>();
-            while (resultSet.next()) {
-                tempNodes.add(buildTempNodeFromResultSet(resultSet));
+    private Set<Integer> loadCorrespondedEdges(List<TempNode> tempNodes, String selectEdgeTrivialDdl) throws SQLException {
+        try (Connection connection = JdbcDataSource.getConnection()) {
+            if (tempNodes.size() == 0) {
+                return new HashSet<>();
             }
-            if(tempNodes.size() == 0){
-                return;
-            }
-            StringBuilder sb = new StringBuilder();
-            sb.append(selectEdgeTrivialDdl);
-            for (int i = 0; i < tempNodes.size(); i++) {
-                sb.append("?,");
-            }
-            String query = sb.deleteCharAt(sb.length() - 1).toString() + ")";
-            PreparedStatement psEdge = connection.prepareStatement(query);
+            PreparedStatement psEdge = getQueryWithInList(selectEdgeTrivialDdl, tempNodes.size(), connection);
             for (int i = 0; i < tempNodes.size(); i++) {
                 psEdge.setInt(i + 1, tempNodes.get(i).id);
             }
-            resultSet = psEdge.executeQuery();
+            ResultSet resultSet = psEdge.executeQuery();
             HashMap<Integer, HashMap<Integer, Neighbour>> neighbours = new HashMap<>();
             while (resultSet.next()) {
                 Neighbour neighbour = buildNeighbourFromResultSet(resultSet);
@@ -104,16 +98,70 @@ public class NodeRepository implements Repository<Node> {
                 nodes.forEach(e -> {
                     try {
                         jedis.set("node%%" + e.id, mapper.writeValueAsString(e));
+                        jedis.set("cache%%" + e.id, "1");
                     } catch (JsonProcessingException e1) {
                         e1.printStackTrace();
                     }
                 });
             }
+            Set<Integer> set = new HashSet<>();
+            nodes.forEach(e -> e.neighbours.forEach(m -> set.add(m.destination)));
+            return set;
         }
     }
 
+    private PreparedStatement getQueryWithInList(String qq, int size, Connection connection) throws SQLException {
+        StringBuilder sb = new StringBuilder();
+        sb.append(qq);
+        for (int i = 0; i < size; i++) {
+            sb.append("?,");
+        }
+        String query = sb.deleteCharAt(sb.length() - 1).toString() + ")";
+        return connection.prepareStatement(query);
+    }
+
+    public Set<Integer> loadTrivial(int first, int last, boolean isOdd) throws SQLException {
+        try (Connection connection = JdbcDataSource
+                .getConnection(); PreparedStatement psNode = connection.prepareStatement
+                (isOdd ? selectNodesTrivialDdl : selectNodesTrivialDdl2)) {
+            psNode.setInt(1, first);
+            psNode.setInt(2, last);
+            ResultSet resultSet = psNode.executeQuery();
+            List<TempNode> tempNodes = new LinkedList<>();
+            while (resultSet.next()) {
+                tempNodes.add(buildTempNodeFromResultSet(resultSet));
+            }
+            if (isOdd)
+                return loadCorrespondedEdges(tempNodes, selectEdgeTrivialDdl);
+            else
+                return loadCorrespondedEdges(tempNodes, selectEdgeTrivialDdl2);
+        }
+    }
+
+    public Set<Integer> loadCandidates(Set<Integer> candidates) throws SQLException {
+//        try (Connection connection = JdbcDataSource.getConnection()) {
+//            PreparedStatement ps = getQueryWithInList(selectNodeNeighboursDdl, candidates.size(), connection);
+//            Iterator<Integer> iterator = candidates.iterator();
+//            for (int i = 0; i < candidates.size(); i++) {
+//                ps.setInt(i + 1, iterator.next());
+//            }
+//            if (candidates.size() == 0) {
+//                return new HashSet<>();
+//            } else {
+//                ResultSet resultSet = ps.executeQuery();
+//                List<TempNode> tempNodes = new LinkedList<>();
+//                while (resultSet.next()) {
+//                    tempNodes.add(buildTempNodeFromResultSet(resultSet));
+//                }
+//                ps.close();
+//                return loadCorrespondedEdges(tempNodes);
+//            }
+//        }
+        return null;
+    }
+
     @Override
-    public void saveBatch(List<Node> listEntity) throws SQLException {
+    public void saveBatch(List<Node> listEntity, boolean isOdd) throws SQLException {
         try (Connection connection = JdbcDataSource
                 .getConnection(); PreparedStatement statement = connection.prepareStatement
                 (insertNodeDdl)) {
@@ -130,17 +178,16 @@ public class NodeRepository implements Repository<Node> {
     }
 
     @Override
-    public void updateBatch(List<Node> listEntity) throws SQLException {
+    public void updateBatch(List<Node> listEntity, boolean isOdd) throws SQLException {
         try (Connection connection = JdbcDataSource
                 .getConnection(); PreparedStatement statement = connection.prepareStatement
-                (updateDdl)) {
+                (isOdd ? insertNodeDdl2 : insertNodeDdl)) {
             connection.setAutoCommit(false);
             List<Neighbour> neighbours = new LinkedList<>();
             listEntity.forEach(e -> neighbours.addAll(e.neighbours));
-            edgeRepository.updateBatch(neighbours);
+            edgeRepository.updateBatch(neighbours, isOdd);
             for (Node node : listEntity) {
                 setNodeStatement(statement, node);
-                statement.setInt(10, node.id);
                 statement.addBatch();
             }
             if (listEntity.size() != 0) {

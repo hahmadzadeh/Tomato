@@ -95,27 +95,20 @@ public class Node implements Callable<Node> {
 
     public Node call() {
         isRunning = true;
-
         if (state == SLEEPING) {
             wakeup();
         }
-
         hasNewMessages = true;
         while (hasNewMessages) {
             assert (capturedMessages.size() == 0);
-
             capturedMessages = msgQueue.getAll(id);
-
             hasNewMessages = false;
-
             boolean canContinue = true;
             while (canContinue) {
                 int beforeExecSize = capturedMessages.size();
                 while (capturedMessages.peek() != null) {
                     Message msg = capturedMessages.poll();
                     assert (msg.receiverID == id);
-
-
                     switch (msg.type) {
                         case Message.ACCEPT:
                             receiveAccept(msg.senderID);
@@ -151,12 +144,10 @@ public class Node implements Callable<Node> {
                     }
                 }
             }
-
             while (returnedMessages.peek() != null) {
                 msgQueue.push(id, returnedMessages.poll(), false);
             }
         }
-
         isRunning = false;
         return this;
     }
@@ -247,7 +238,7 @@ public class Node implements Callable<Node> {
     public void receiveTest(int senderLevel, Edge senderFragmentId, int neighbourID,
                             Message inMsg) {
         Neighbour sender = Neighbour.getNeighbourById(neighbourID, this.neighbours);
-        assert (sender != null) : "wrong message. neighbour not foud.";
+        assert (sender != null) : "wrong message. neighbour not found.";
 
         if (state == SLEEPING) {
             wakeup();
@@ -299,7 +290,7 @@ public class Node implements Callable<Node> {
 
     public void receiveReport(Edge edge, int neighbourID, Message inMsg) {
         Neighbour sender = Neighbour.getNeighbourById(neighbourID, this.neighbours);
-        assert (sender != null) : "wrong message. neighbour not foud.";
+        assert (sender != null) : "wrong message. neighbour not found.";
 
         if (!sender.equals(inBranch)) {
             findCount--;

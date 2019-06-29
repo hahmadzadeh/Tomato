@@ -10,9 +10,9 @@ public interface Repository<T> {
 
   void update(T entity) throws SQLException;
 
-  void saveBatch(List<T> listEntity) throws SQLException;
+  void saveBatch(List<T> listEntity, boolean isOdd) throws SQLException;
 
-  void updateBatch(List<T> listEntity) throws SQLException;
+  void updateBatch(List<T> listEntity, boolean isOdd) throws SQLException;
 
   T read(int id) throws SQLException;
 }

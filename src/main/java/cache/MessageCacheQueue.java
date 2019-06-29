@@ -30,6 +30,8 @@ public class MessageCacheQueue extends Cache implements MessageQueue {
     @Override
     public void push(int id, Message message, boolean isNew) {
         try (Jedis jedis = RedisDataSource.getResource()) {
+            if (isNew)
+                System.out.println(isNew + "---" + message);
             try {
                 jedis.rpush("msg%%" + id, mapper.writeValueAsString(message));
             } catch (JsonProcessingException e) {

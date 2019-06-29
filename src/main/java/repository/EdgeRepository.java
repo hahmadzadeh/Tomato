@@ -1,7 +1,6 @@
 package repository;
 
 import GHS.Neighbour;
-import GHS.Node;
 import utils.JdbcDataSource;
 
 import java.sql.Connection;
@@ -14,8 +13,11 @@ public class EdgeRepository implements Repository<Neighbour> {
     private final static String insertEdgeDDL = "INSERT INTO tomato.\"Neighbour\"(\n" +
             "\tsource, dest, type, weight)\n" +
             "\tVALUES (?, ?, ?, ?)";
+    private final static String insertEdgeDDL2 = "INSERT INTO tomato.\"Neighbour2\"(\n" +
+            "\tsource, dest, type, weight)\n" +
+            "\tVALUES (?, ?, ?, ?)";
     private final static String updateEdgeDDL = "UPDATE tomato.\"Neighbour\"\n" +
-            "\tSET source=?, dest=?, type=?, weight=?\n" +
+            "\tSET type=?\n" +
             "\tWHERE source=? and dest=?";
 
     @Override
@@ -47,7 +49,7 @@ public class EdgeRepository implements Repository<Neighbour> {
     }
 
     @Override
-    public void saveBatch(List<Neighbour> listEntity) throws SQLException {
+    public void saveBatch(List<Neighbour> listEntity, boolean isOdd) throws SQLException {
         try (Connection connection = JdbcDataSource.getConnection();
              PreparedStatement statement = connection.prepareStatement(insertEdgeDDL)) {
             connection.setAutoCommit(false);
@@ -63,15 +65,14 @@ public class EdgeRepository implements Repository<Neighbour> {
     }
 
     @Override
-    public void updateBatch(List<Neighbour> listEntity) throws SQLException {
+    public void updateBatch(List<Neighbour> listEntity, boolean isOdd) throws SQLException {
         try (Connection connection = JdbcDataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(updateEdgeDDL)) {
+             PreparedStatement statement = connection.prepareStatement(isOdd ? insertEdgeDDL2 : insertEdgeDDL)) {
             connection.setAutoCommit(false);
             for (Neighbour entity : listEntity) {
                 setEdgeStatement(entity, statement);
-                statement.setInt(5, entity.source);
-                statement.setInt(6, entity.destination);
                 statement.addBatch();
+
             }
             if (listEntity.size() != 0) {
                 statement.executeBatch();

@@ -35,7 +35,7 @@ public class Cache<T> {
         }
     }
 
-    public void flush(String keyPrefix, Class<T> tClass, Repository<T> repository, boolean isnew) {
+    public void flush(String keyPrefix, Class<T> tClass, Repository<T> repository, boolean isnew, boolean isOdd) {
         synchronized (this) {
             if (this.counter.get() % this.cacheSize == 0 || !isnew) {
                 try (Jedis jedis = RedisDataSource.getResource()) {
@@ -56,9 +56,9 @@ public class Cache<T> {
                         jedis.del(key);
                     }
                     if (isnew)
-                        repository.saveBatch(entityList);
+                        repository.saveBatch(entityList, isOdd);
                     else {
-                        repository.updateBatch(entityList);
+                        repository.updateBatch(entityList, isOdd);
                     }
                     this.counter.incrementAndGet();
                 } catch (IOException | SQLException e) {

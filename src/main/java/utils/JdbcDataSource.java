@@ -12,7 +12,7 @@ public class JdbcDataSource {
     private static HikariDataSource ds;
 
     static {
-        config.setJdbcUrl("jdbc:postgresql://127.0.0.1:5432/tomato");
+        config.setJdbcUrl("jdbc:postgresql://127.0.0.1:5432/tomato?rewriteBatchedStatements=true");
         config.setUsername("tomato");
         config.setPassword("tomato");
         config.addDataSourceProperty("cachePrepStmts", "true");

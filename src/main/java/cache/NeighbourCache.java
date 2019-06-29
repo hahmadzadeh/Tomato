@@ -18,9 +18,6 @@ public class NeighbourCache extends Cache<Neighbour>{
 
     public void addNeighbour(Neighbour edge){
         try(Jedis jedis = RedisDataSource.getResource()){
-            if (this.counter.get() % this.cacheSize == 0) {
-                flush("edge%%", Neighbour.class, edgeRepository, true);
-            }
             jedis.rpush("edge%%" + edge.source, mapper.writeValueAsString(edge));
             this.counter.incrementAndGet();
         } catch (JsonProcessingException e) {

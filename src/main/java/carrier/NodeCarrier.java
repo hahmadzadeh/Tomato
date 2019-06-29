@@ -20,7 +20,7 @@ public class NodeCarrier implements Callable<List<Node>> {
 
     public NodeCarrier(LinkedBlockingQueue<String> linkedBlockingQueue, NodeCache nodeCache
             , int num, MessageQueue messageQueue) {
-        this.executorService = Executors.newFixedThreadPool(5);
+        this.executorService = Executors.newFixedThreadPool(20);
         this.linkedBlockingQueue = linkedBlockingQueue;
         this.nodeCache = nodeCache;
         this.cacheSize = num;
