@@ -18,6 +18,8 @@ public class Node implements Callable<Node> {
     public static final byte FIND = 0X03;
 
     @JsonIgnore
+    public static int halt_num = 0;
+    @JsonIgnore
     public MessageQueue msgQueue;
     @JsonIgnore
     public Queue<Message> messages = new ConcurrentLinkedQueue<>();
@@ -96,14 +98,6 @@ public class Node implements Callable<Node> {
 
             capturedMessages = msgQueue.getAll(id);
 
-            // while (messages.peek() != null) {
-            // capturedMessages.add(messages.poll());
-            // }
-
-            // while (returnedMessages.peek() != null) {
-            // capturedMessages.add(returnedMessages.poll());
-            // }
-
             hasNewMessages = false;
 
             boolean canContinue = true;
@@ -113,7 +107,6 @@ public class Node implements Callable<Node> {
                     Message msg = capturedMessages.poll();
                     assert (msg.receiverID == id);
 
-                     System.out.println("id " + id + ": executing " + msg);
 
                     switch (msg.type) {
                         case Message.ACCEPT:
@@ -136,6 +129,9 @@ public class Node implements Callable<Node> {
                             break;
                         case Message.REPORT:
                             receiveReport(msg.edge, msg.senderID, msg);
+                            break;
+                        case Message.Halt:
+                            finish();
                             break;
                     }
                 }
@@ -187,14 +183,6 @@ public class Node implements Callable<Node> {
             if (state == FIND) {
                 findCount++;
             }
-            ///// ADD this to GHS
-//            if (sender.equals(testEdge)) {
-//                testEdge = null;
-//                if (state == FIND) {
-//                    test();
-//                }
-//            }
-            ///// End
         } else if (sender.type == Neighbour.BASIC) {
             returnedMessages.add(inMsg);
         } else {
@@ -212,9 +200,7 @@ public class Node implements Callable<Node> {
         this.fragmentId = senderFragmentId;
         this.findCount = 0;
         inBranch = sender;
-        // Be Careful!
         sender.type = Neighbour.BRANCH;
-        // Caution !!
         bestEdge = null;
         bestWeight = Edge.INFINITY;
         for (Neighbour neighbour : neighbours) {
@@ -392,12 +378,24 @@ public class Node implements Callable<Node> {
         msgQueue.push(msg.receiverID, msg, true);
     }
 
+    private void sendHalt(Neighbour m) {
+        Message msg = new Message(id, m.destination, Message.Halt,  System.nanoTime());
+        msgQueue.push(msg.receiverID, msg, true);
+    }
+
     private void finish() {
-        // System.out.println("{ id: " + id + " ,inBranch: " + ((inBranch != null) ?
-        // inBranch.destination : null) + "}");
-        // NodeHandler.getNodeHandler().printAll();
-        //NodeHandler.getNodeHandler().printEdges(this);
-        System.out.println(id + "-- halt");
+        for (Neighbour neighbour :
+                neighbours) {
+            if (neighbour.type == Neighbour.BRANCH && !neighbour.equals(inBranch)) {
+                sendHalt(neighbour);
+            }
+        }
+
+        synchronized (Node.class) {
+            halt_num ++;
+        }
+//        System.out.println(id + "-- halt");
+//        System.out.println("exec Time until now : " + (System.currentTimeMillis() - beginning_time_millis));
     }
 
     @Override

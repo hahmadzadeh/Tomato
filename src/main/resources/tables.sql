@@ -28,7 +28,7 @@ CREATE TABLE tomato."Neighbour"
 (
     source integer,
     dest integer,
-    type smallint default 3,
+    type smallint,
     weight double precision
 )
 WITH (

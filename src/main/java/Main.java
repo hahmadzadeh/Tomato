@@ -1,4 +1,3 @@
-import GHS.Edge;
 import GHS.Node;
 import cache.MessageCacheQueue;
 import cache.NeighbourCache;
@@ -14,6 +13,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import loader.LoadGraphToPlatform;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
@@ -24,6 +25,8 @@ import repository.NodeRepository;
 import utils.JdbcDataSource;
 
 public class Main {
+
+    public static long beginning_time_millis;
 
     public static void main(String[] args)
             throws IOException, SQLException, ExecutionException, InterruptedException {
@@ -58,7 +61,13 @@ public class Main {
         int numThreads = 25;
         ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
         List<Future<Node>> slavesResult = new LinkedList<>();
+        beginning_time_millis = System.currentTimeMillis();
         while (true) {
+            if (Node.halt_num == graphSize) {
+                System.out.println("Finish");
+                break;
+            }
+
             try (Jedis jedis = pool.getResource()) {
                 if (nodeQueue.isEmpty()) {
                     nodeCache.flush("node%%", Node.class, nodeRepository, false);
@@ -68,7 +77,7 @@ public class Main {
                     first = first > graphSize ? 0 : first;
                 }
                 for (int i = 0; i < numThreads; i++) {
-                    if (nodeQueue.isEmpty()) {
+                    if(nodeQueue.isEmpty()){
                         break;
                     }
                     String key = nodeQueue.poll();
@@ -80,7 +89,10 @@ public class Main {
                     nodeCache.addNode(future.get(), false);
                 }
                 slavesResult.clear();
+                //nodeCache.flush("node%%", Node.class, nodeRepository, false);
             }
         }
+
+        System.out.println("exec Time until now : " + (System.currentTimeMillis() - beginning_time_millis));
     }
 }
