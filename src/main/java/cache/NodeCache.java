@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import redis.clients.jedis.Jedis;
 import repository.NodeRepository;
+import utils.RedisDataSource;
 
 public class NodeCache extends Cache<Node> {
     public NodeRepository nodeRepository;
@@ -17,7 +18,7 @@ public class NodeCache extends Cache<Node> {
     }
 
     public void addNode(Node node, boolean isnew) {
-        try (Jedis jedis = pool.getResource()) {
+        try (Jedis jedis = RedisDataSource.getResource()) {
             if (this.counter.get() % this.cacheSize == 0) {
                 flush("node%%", Node.class, nodeRepository, isnew);
             }
@@ -29,7 +30,7 @@ public class NodeCache extends Cache<Node> {
     }
 
     public Node getNode(int id) {
-        try (Jedis jedis = pool.getResource()) {
+        try (Jedis jedis = RedisDataSource.getResource()) {
             String s = jedis.get("node%%" + id);
             return s == null ? null : mapper.readValue(s, Node.class);
         } catch (IOException e) {
@@ -39,7 +40,7 @@ public class NodeCache extends Cache<Node> {
     }
 
     public Node getNode(String id) {
-        try (Jedis jedis = pool.getResource()) {
+        try (Jedis jedis = RedisDataSource.getResource()) {
             String s = jedis.get(id);
             jedis.del(id);
             return s == null ? null : mapper.readValue(s, Node.class);
@@ -50,14 +51,14 @@ public class NodeCache extends Cache<Node> {
     }
 
     public boolean exist(int id) {
-        try (Jedis jedis = pool.getResource()) {
+        try (Jedis jedis = RedisDataSource.getResource()) {
             String s = jedis.get("cc%%" + id);
             return s != null;
         }
     }
 
     public void addExistence(int id) {
-        try(Jedis jedis = pool.getResource()){
+        try(Jedis jedis = RedisDataSource.getResource()){
             jedis.set("cc%%" + id, "1");
         }
     }

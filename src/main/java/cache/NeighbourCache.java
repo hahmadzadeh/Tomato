@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import java.io.IOException;
 import redis.clients.jedis.Jedis;
 import repository.EdgeRepository;
+import utils.RedisDataSource;
 
 public class NeighbourCache extends Cache<Neighbour>{
 
@@ -16,7 +17,7 @@ public class NeighbourCache extends Cache<Neighbour>{
     public EdgeRepository edgeRepository;
 
     public void addNeighbour(Neighbour edge){
-        try(Jedis jedis = pool.getResource()){
+        try(Jedis jedis = RedisDataSource.getResource()){
             if (this.counter.get() % this.cacheSize == 0) {
                 flush("edge%%", Neighbour.class, edgeRepository, true);
             }
@@ -27,7 +28,7 @@ public class NeighbourCache extends Cache<Neighbour>{
         }
     }
     public Neighbour getNeighbour(int id){
-        try (Jedis jedis = pool.getResource()){
+        try (Jedis jedis = RedisDataSource.getResource()){
             String s = jedis.get("edge%%" + id);
             return s == null ? null : mapper.readValue(s, Neighbour.class);
         } catch (IOException e) {

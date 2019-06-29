@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import utils.RedisDataSource;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -397,11 +398,9 @@ public class Node implements Callable<Node> {
                 sendHalt(neighbour);
             }
         }
-
-        JedisPool pool = MessageCacheQueue.jedisPool;
-            try(Jedis jedis = pool.getResource()) {
-                jedis.set("finishNode%%" + id, "True");
-            }
+        try (Jedis jedis = RedisDataSource.getResource()) {
+            jedis.set("finishNode%%" + id, "True");
+        }
     }
 
     @Override

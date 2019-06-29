@@ -13,6 +13,7 @@ import loader.LoadGraphToPlatform;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import repository.Repository;
+import utils.RedisDataSource;
 
 public class Cache<T> {
 
@@ -20,7 +21,6 @@ public class Cache<T> {
     protected int cacheSize;
     protected int cacheSizeMsg;
     public AtomicInteger counter;
-    protected JedisPool pool = MessageCacheQueue.jedisPool;
     protected ObjectMapper mapper = new ObjectMapper();
 
     public Cache() {
@@ -38,7 +38,7 @@ public class Cache<T> {
     public void flush(String keyPrefix, Class<T> tClass, Repository<T> repository, boolean isnew) {
         synchronized (this) {
             if (this.counter.get() % this.cacheSize == 0 || !isnew) {
-                try (Jedis jedis = pool.getResource()) {
+                try (Jedis jedis = RedisDataSource.getResource()) {
                     List<T> entityList = new LinkedList<>();
                     Set<String> keys = jedis.keys(keyPrefix + "*");
                     for (String key : keys) {

@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import utils.JdbcDataSource;
+import utils.RedisDataSource;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -21,7 +22,6 @@ import java.util.List;
 
 public class NodeRepository implements Repository<Node> {
 
-    private final JedisPool pool = MessageCacheQueue.jedisPool;
     private final String insertNodeDdl =
             "INSERT INTO tomato.\"Node\" (ID, BEST_EDGE, TEST_EDGE, IN_BRANCH, LEVEL, FIND_COUNT, STATE, FRAGMENT_ID,  BEST_WEIGHT) "
                     +
@@ -100,7 +100,7 @@ public class NodeRepository implements Repository<Node> {
             for (TempNode tempNode : tempNodes) {
                 nodes.add(buildNodeFromTempNode(tempNode, neighbours.get(tempNode.id)));
             }
-            try (Jedis jedis = pool.getResource()) {
+            try (Jedis jedis = RedisDataSource.getResource()) {
                 nodes.forEach(e -> {
                     try {
                         jedis.set("node%%" + e.id, mapper.writeValueAsString(e));
