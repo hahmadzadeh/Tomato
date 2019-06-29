@@ -9,6 +9,7 @@ public class Message {
     public static final byte CONNECT = 0X05;
     public static final byte REPORT = 0X06;
     public static final byte CHANGE_CORE = 0X07;
+    public static final byte Halt = 0X08;
     public int senderID;
     public int receiverID;
     public byte type;

@@ -55,7 +55,6 @@ public class MessageCacheQueue extends Cache implements MessageQueue {
 
     @Override
     public void push(int id, Message message, boolean isNew) {
-        System.out.println(isNew + " " + message);
         try (Jedis jedis = jedisPool.getResource()) {
             try {
                 jedis.rpush("msg%%" + id, mapper.writeValueAsString(message));

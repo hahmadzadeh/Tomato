@@ -4,7 +4,6 @@ import cache.NeighbourCache;
 import cache.NodeCache;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
@@ -12,6 +11,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import loader.LoadGraphToPlatform;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
@@ -20,6 +21,8 @@ import repository.NodeRepository;
 import utils.JdbcDataSource;
 
 public class Main {
+
+    public static long beginning_time_millis;
 
     public static void main(String[] args)
         throws IOException, SQLException, ExecutionException, InterruptedException {
@@ -41,17 +44,23 @@ public class Main {
         NeighbourCache neighbourCache = new NeighbourCache(edgeRepository);
         LoadGraphToPlatform loadGraphToPlatform = new LoadGraphToPlatform(nodeCache,
             neighbourCache);
-        int graphSize = loadGraphToPlatform.initialLoadFromTextFile("/input4");
+        int graphSize = loadGraphToPlatform.initialLoadFromTextFile("/test");
         LinkedList<String> nodeQueue = new LinkedList<>();
 
         MessageCacheQueue messageCacheQueue = new MessageCacheQueue();
         int first = 0;
-        int step = 50;
+        int step = 30;
 
-        int numThreads = 25;
+        int numThreads = 1;
         ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
         List<Future<Node>> slavesResult = new LinkedList<>();
+        beginning_time_millis = System.currentTimeMillis();
         while (true) {
+            if (Node.halt_num == graphSize) {
+                System.out.println("Finish");
+                break;
+            }
+
             try (Jedis jedis = pool.getResource()) {
                 if (nodeQueue.isEmpty()) {
                     nodeCache.flush("node%%", Node.class, nodeRepository, false);
@@ -76,5 +85,7 @@ public class Main {
                 //nodeCache.flush("node%%", Node.class, nodeRepository, false);
             }
         }
+
+        System.out.println("exec Time until now : " + (System.currentTimeMillis() - beginning_time_millis));
     }
 }

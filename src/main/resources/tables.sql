@@ -55,9 +55,8 @@ CREATE TABLE tomato."Node"
     find_count integer,
     state smallint,
     fragment_id character varying COLLATE pg_catalog."default",
-    best_weight character varying COLLATE pg_catalog."default",
-    iid integer NOT NULL DEFAULT nextval('"Node_iid_seq"'::regclass),
-    CONSTRAINT "Node_pkey" PRIMARY KEY (iid)
+    best_weight character varying COLLATE pg_catalog."default"
+
 )
 WITH (
     OIDS = FALSE
