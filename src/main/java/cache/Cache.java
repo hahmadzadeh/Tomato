@@ -42,7 +42,7 @@ public class Cache<T> {
                     List<T> entityList = new LinkedList<>();
                     Set<String> keys = jedis.keys(keyPrefix + "*");
                     for (String key : keys) {
-                        if (keyPrefix.equals("node%%")) {
+                        if (keyPrefix.equals("finishNode%%")) {
                             String entityString = jedis.get(key);
                             T entity = mapper.readValue(entityString, tClass);
                             entityList.add(entity);

@@ -33,19 +33,21 @@ public class NodeCarrier implements Callable<List<Node>> {
     public List<Node> call() throws ExecutionException, InterruptedException {
         result.clear();
         while (true) {
-            for (int i = 0; i < cacheSize; i++) {
-                String poll = linkedBlockingQueue.poll();
-                if (poll == null) {
-                    for (Future<Node> future : slavesResult) {
-                        result.add(future.get());
-                    }
-                    slavesResult.clear();
-                    return result;
-                }
+            //for (int i = 0; i < cacheSize; i++) {
+                String poll = linkedBlockingQueue.take();
+//                if (poll == null) {
+//                    for (Future<Node> future : slavesResult) {
+//                        result.add(future.get());
+//                    }
+//                    slavesResult.clear();
+//                    return result;
+//                }
                 Node node = nodeCache.getNode(poll);
                 node.msgQueue = messageQueue;
-                slavesResult.add(executorService.submit(node));
-            }
+                node.nodeCache = nodeCache;
+                node.inputQ = linkedBlockingQueue;
+                executorService.submit(node);
+            //}
         }
     }
 }

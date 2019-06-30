@@ -13,6 +13,7 @@ import java.util.concurrent.*;
 
 import carrier.NodeCarrier;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.sun.scenario.effect.impl.state.LinearConvolveKernel;
 import loader.LoadGraphToPlatform;
 import org.postgresql.copy.CopyManager;
 import org.postgresql.core.BaseConnection;
@@ -60,15 +61,33 @@ public class Main {
         NodeCache nodeCache = new NodeCache(nodeRepository);
         LinkedBlockingQueue<String> nodeQueue = new LinkedBlockingQueue<>();
         MessageCacheQueue messageCacheQueue = new MessageCacheQueue();
-        int first = 0;
+        final int[] first = {0};
         int step = 10000;
         int numThreads = 20;
         ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
         List<NodeCarrier> nodeCarriers = new LinkedList<>();
+        LinkedBlockingQueue<String> inputQ = new LinkedBlockingQueue<>();
+        int finalGraphSize = graphSize;
+        nodeRepository.inputQ = inputQ;
+        Thread t = new Thread(() -> {
+            while (first[0] < finalGraphSize) {
+                try {
+                    nodeRepository.loadTrivial(first[0], first[0] + step, true);
+                    first[0] += step;
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        t.start();
+        //nodeRepository.loadTrivial(0, graphSize + 1, true);
+//        try (Jedis jedis = RedisDataSource.getResource()) {
+//            inputQ.addAll(jedis.keys("node%%*"));
+//        }
         for (int i = 0; i < numThreads; i++) {
-            NodeCarrier nodeCarrier = new NodeCarrier(nodeQueue, nodeCache, step, messageCacheQueue);
+            NodeCarrier nodeCarrier = new NodeCarrier(inputQ, nodeCache, step, messageCacheQueue);
             nodeCarriers.add(nodeCarrier);
-            //executorService.submit(nodeCarrier);
+            executorService.submit(nodeCarrier);
         }
         beginning_time_millis = System.currentTimeMillis();
         List<Future<List<Node>>> slavesResult = new LinkedList<>();
@@ -82,43 +101,45 @@ public class Main {
         String restartSeq2 = "ALTER SEQUENCE tomato.\"Node2_iid_seq\" RESTART WITH 1;\n";
         while (true) {
             try (Jedis jedis = RedisDataSource.getResource()) {
-                  if (nodeQueue.isEmpty()) {
-                    if (jedis.keys("finishNode%%*").size() == graphSize) {
-                        System.out.println("Finish");
-                        break;
-                    }
-                    nodeRepository.loadTrivial(first, first + step, isOdd);
-                    nodeQueue.addAll(jedis.keys("node%%*"));
-                    if(first > graphSize){
-                        try(Connection connection = JdbcDataSource.getConnection()){
-                            PreparedStatement ps1 = connection.prepareStatement(isOdd ? deleteNeighbour : deleteNeighbour2);
-                            ps1.execute();
-                            PreparedStatement ps2 = connection.prepareStatement(isOdd ? deleteNode : deleteNode2);
-                            ps2.execute();
-                            PreparedStatement ps3 = connection.prepareStatement(isOdd ? restartSeq : restartSeq2);
-                            ps3.execute();
-                            ps1.close();
-                            ps2.close();
-                            ps3.close();
-                        }
-                        isOdd = !isOdd;
-                        first = -1 * step;
-                    }
-                    first += step;
-                }else{
-                    for (NodeCarrier nodeCarrier: nodeCarriers) {
-                        slavesResult.add(executorService.submit(nodeCarrier));
-                    }
-                    for (Future<List<Node>> future: slavesResult) {
-                        results.addAll(future.get());
-                    }
-                    slavesResult.clear();
-                    nodeRepository.updateBatch(results, isOdd);
-                    results.clear();
+                //if (nodeQueue.isEmpty()) {
+                if (jedis.keys("finishNode%%*").size() == graphSize) {
+                    System.out.println("Finish");
+                    System.out.println("exec Time until now : " + (System.currentTimeMillis() - beginning_time_millis));
+                    nodeCache.flush("finishNode%%", Node.class, nodeRepository, false, true);
+                    break;
                 }
+                Thread.sleep(300);
+//                    nodeRepository.loadTrivial(first, first + step, isOdd);
+//                    nodeQueue.addAll(jedis.keys("node%%*"));
+//                    if(first > graphSize){
+//                        try(Connection connection = JdbcDataSource.getConnection()){
+//                            PreparedStatement ps1 = connection.prepareStatement(isOdd ? deleteNeighbour : deleteNeighbour2);
+//                            ps1.execute();
+//                            PreparedStatement ps2 = connection.prepareStatement(isOdd ? deleteNode : deleteNode2);
+//                            ps2.execute();
+//                            PreparedStatement ps3 = connection.prepareStatement(isOdd ? restartSeq : restartSeq2);
+//                            ps3.execute();
+//                            ps1.close();
+//                            ps2.close();
+//                            ps3.close();
+//                        }
+//                        isOdd = !isOdd;
+//                        first = -1 * step;
+//                    }
+//                    first += step;
+                //}else{
+//                for (NodeCarrier nodeCarrier : nodeCarriers) {
+//                    slavesResult.add(executorService.submit(nodeCarrier));
+//                }
+//                for (Future<List<Node>> future : slavesResult) {
+//                    results.addAll(future.get());
+//                }
+//                slavesResult.clear();
+//                nodeRepository.updateBatch(results, isOdd);
+//                results.clear();
+                //}
             }
         }
         executorService.shutdown();
-        System.out.println("exec Time until now : " + (System.currentTimeMillis() - beginning_time_millis));
     }
 }

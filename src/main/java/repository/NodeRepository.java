@@ -18,6 +18,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class NodeRepository implements Repository<Node> {
 
@@ -47,6 +48,7 @@ public class NodeRepository implements Repository<Node> {
     private final String selectEdgeDdl = "SELECT * FROM tomato.\"Neighbour\" WHERE source=?";
     private final ObjectMapper mapper = new ObjectMapper();
     private EdgeRepository edgeRepository;
+    public LinkedBlockingQueue<String> inputQ;
 
     public NodeRepository(EdgeRepository edgeRepository) {
         this.edgeRepository = edgeRepository;
@@ -98,7 +100,8 @@ public class NodeRepository implements Repository<Node> {
                 nodes.forEach(e -> {
                     try {
                         jedis.set("node%%" + e.id, mapper.writeValueAsString(e));
-                        jedis.set("cache%%" + e.id, "1");
+                        inputQ.add("node%%" + e.id);
+                        //jedis.set("cache%%" + e.id, "1");
                     } catch (JsonProcessingException e1) {
                         e1.printStackTrace();
                     }

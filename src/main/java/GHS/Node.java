@@ -5,6 +5,7 @@ import cache.MessageQueue;
 import cache.NodeCache;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import utils.RedisDataSource;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class Node implements Callable<Node> {
 
@@ -39,6 +41,8 @@ public class Node implements Callable<Node> {
     public NodeCache nodeCache;
     @JsonIgnore
     public boolean isRunning = false;
+    @JsonIgnore
+    public LinkedBlockingQueue<String> inputQ;
 
     public int id;
 
@@ -98,6 +102,7 @@ public class Node implements Callable<Node> {
         if (state == SLEEPING) {
             wakeup();
         }
+        boolean isFinished = false;
         hasNewMessages = true;
         while (hasNewMessages) {
             assert (capturedMessages.size() == 0);
@@ -132,6 +137,7 @@ public class Node implements Callable<Node> {
                             receiveReport(msg.edge, msg.senderID, msg);
                             break;
                         case Message.Halt:
+                            isFinished = true;
                             finish();
                             break;
                     }
@@ -149,6 +155,10 @@ public class Node implements Callable<Node> {
             }
         }
         isRunning = false;
+        nodeCache.addNode(this, false);
+        if(!isFinished){
+            inputQ.add("node%%" + id);
+        }
         return this;
     }
 
@@ -389,8 +399,13 @@ public class Node implements Callable<Node> {
                 sendHalt(neighbour);
             }
         }
+        ObjectMapper mapper = new ObjectMapper();
         try (Jedis jedis = RedisDataSource.getResource()) {
-            jedis.set("finishNode%%" + id, "True");
+            try {
+                jedis.set("finishNode%%" + id, mapper.writeValueAsString(this));
+            } catch (JsonProcessingException e) {
+                e.printStackTrace();
+            }
         }
     }
 

@@ -26,7 +26,7 @@ public class NodeCache extends Cache<Node> {
 
     public void addNode(Node node, boolean isnew) {
         try (Jedis jedis = RedisDataSource.getResource()) {
-            this.counter.incrementAndGet();
+            //this.counter.incrementAndGet();
             jedis.set("node%%" + node.id, mapper.writeValueAsString(node));
         } catch (JsonProcessingException e) {
             e.printStackTrace();
